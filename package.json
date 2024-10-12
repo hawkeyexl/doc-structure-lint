@@ -1,0 +1,21 @@
+{
+  "name": "markdown-structure-lint",
+  "version": "1.0.0",
+  "description": "Lint markdown files for structure.",
+  "bin":{
+    "markdown-structure-lint": "./index.js"
+  },
+  "main": "./index.js",
+  "scripts": {
+    "start": "./index.js",
+    "test": "mocha"
+  },
+  "author": "Manny Silva",
+  "license": "MIT",
+  "dependencies": {
+    "chai": "^5.1.1",
+    "commander": "^12.1.0",
+    "markdown-it": "^14.1.0",
+    "mocha": "^10.7.3"
+  }
+}
