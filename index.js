@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { program } = require('commander');
-const markdownIt = require('markdown-it');
+const fs = require("fs");
+const path = require("path");
+const { program } = require("commander");
+const markdownIt = require("markdown-it");
 
 program
-  .version('1.0.0')
-  .description('Compare the structure of a markdown file against a template')
-  .requiredOption('-t, --template <path>', 'Path to the template markdown file')
-  .requiredOption('-f, --file <path>', 'Path to the markdown file to check')
+  .version("1.0.0")
+  .description("Compare the structure of a markdown file against a template")
+  .requiredOption("-t, --template <path>", "Path to the template markdown file")
+  .requiredOption("-f, --file <path>", "Path to the markdown file to check")
   .parse(process.argv);
 
 const options = program.opts();
 
 function parseMarkdown(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
+  const content = fs.readFileSync(filePath, "utf8");
   const md = new markdownIt();
   const tokens = md.parse(content, {});
   return extractStructure(tokens);
@@ -26,10 +26,10 @@ function extractStructure(tokens) {
   let currentLevel = { level: 0, children: structure, content: [] };
   const stack = [currentLevel];
 
-  tokens.forEach(token => {
-    if (token.type === 'heading_open') {
+  tokens.forEach((token) => {
+    if (token.type === "heading_open") {
       const level = parseInt(token.tag.slice(1));
-      const newLevel = { level, title: '', children: [], content: [] };
+      const newLevel = { level, title: "", children: [], content: [] };
 
       while (currentLevel.level >= level) {
         stack.pop();
@@ -39,18 +39,24 @@ function extractStructure(tokens) {
       currentLevel.children.push(newLevel);
       stack.push(newLevel);
       currentLevel = newLevel;
-    } else if (token.type === 'inline' && stack[stack.length - 1].title === '') {
+    } else if (
+      token.type === "inline" &&
+      stack[stack.length - 1].title === ""
+    ) {
       stack[stack.length - 1].title = token.content;
-    } else if (token.type === 'paragraph_open') {
-      currentLevel.content.push({ type: 'paragraph', content: '' });
-    } else if (token.type === 'fence') {
-      currentLevel.content.push({ type: 'code_block', content: token.content });
-    } else if (token.type === 'inline' && currentLevel.content.length > 0) {
+    } else if (token.type === "paragraph_open") {
+      currentLevel.content.push({ type: "paragraph", content: "" });
+    } else if (token.type === "fence") {
+      currentLevel.content.push({ type: "code_block", content: token.content });
+    } else if (token.type === "inline" && currentLevel.content.length > 0) {
       const lastContent = currentLevel.content[currentLevel.content.length - 1];
-      if (lastContent.type === 'paragraph') {
+      if (lastContent.type === "paragraph") {
         lastContent.content += token.content;
       }
-    } else if (token.type === 'html_block' && token.content.trim().startsWith('<!-- template:')) {
+    } else if (
+      token.type === "html_block" &&
+      token.content.trim().startsWith("<!-- template:")
+    ) {
       currentLevel.template = parseTemplateComment(token.content);
     }
   });
@@ -60,10 +66,10 @@ function extractStructure(tokens) {
 
 function parseTemplateComment(comment) {
   const template = {};
-  const lines = comment.trim().split('\n');
-  lines.slice(1, -1).forEach(line => {
-    const [key, value] = line.split(':').map(s => s.trim());
-    template[key] = value;
+  const lines = comment.trim().split("\n");
+  lines.slice(1, -1).forEach((line) => {
+    const [key, value] = line.split(":").map((s) => s.trim());
+    template[key] = value === "true" ? true : value === "false" ? false : value;
   });
   return template;
 }
@@ -73,58 +79,130 @@ function compareStructures(template, actual) {
 
   function compare(templateSection, actualSection, path = []) {
     if (!actualSection) {
-      issues.push(`Missing section: ${path.join(' > ')}`);
+      if (templateSection.template && templateSection.template.optional) {
+        return; // Optional section is missing, which is allowed
+      }
+      issues.push(`Missing section: ${path.join(" > ")}`);
       return;
     }
 
-    if (templateSection.title && templateSection.title !== actualSection.title) {
-      issues.push(`Title mismatch at ${path.join(' > ')}: Expected "${templateSection.title}", found "${actualSection.title}"`);
+    if (
+      templateSection.title &&
+      templateSection.title !== actualSection.title
+    ) {
+      issues.push(
+        `Title mismatch at ${path.join(" > ")}: Expected "${
+          templateSection.title
+        }", found "${actualSection.title}"`
+      );
     }
 
     if (templateSection.template) {
       checkTemplateRules(templateSection, actualSection, path);
     }
 
-    if (templateSection.template && templateSection.template.subheadings === '*') {
+    if (
+      templateSection.template &&
+      templateSection.template.subheadings === "*"
+    ) {
       // Allow any number of subheadings at any level
       return;
     }
 
-    templateSection.children.forEach((templateChild, index) => {
-      const actualChild = actualSection.children[index];
-      compare(templateChild, actualChild, [...path, templateChild.title || `Section ${index + 1}`]);
+    let actualIndex = 0;
+    templateSection.children.forEach((templateChild) => {
+      if (templateChild.template && templateChild.template.optional) {
+        // For optional sections, find the matching section in the actual document
+        const matchingActualChild = actualSection.children.find(
+          (child) => child.title === templateChild.title
+        );
+        if (matchingActualChild) {
+          compare(templateChild, matchingActualChild, [
+            ...path,
+            templateChild.title,
+          ]);
+        }
+      } else {
+        // For required sections, compare in order
+        const actualChild = actualSection.children[actualIndex];
+        compare(templateChild, actualChild, [
+          ...path,
+          templateChild.title || `Section ${actualIndex + 1}`,
+        ]);
+        actualIndex++;
+      }
     });
 
-    if (actualSection.children.length > templateSection.children.length) {
-      issues.push(`Extra sections found in ${path.join(' > ')}`);
+    // Check for extra non-optional sections
+    if (actualSection.children.length > actualIndex) {
+      const extraSections = actualSection.children
+        .slice(actualIndex)
+        .filter(
+          (child) =>
+            !templateSection.children.some(
+              (templateChild) =>
+                templateChild.template &&
+                templateChild.template.optional &&
+                templateChild.title === child.title
+            )
+        );
+      if (extraSections.length > 0) {
+        issues.push(
+          `Extra sections found in ${path.join(" > ")}: ${extraSections
+            .map((s) => s.title)
+            .join(", ")}`
+        );
+      }
     }
   }
 
   function checkTemplateRules(templateSection, actualSection, path) {
     const rules = templateSection.template;
-    const sectionPath = path.join(' > ');
+    const sectionPath = path.join(" > ");
 
     if (rules.paragraphs) {
       const [min, max] = parseRange(rules.paragraphs);
-      const paragraphCount = actualSection.content.filter(c => c.type === 'paragraph').length;
+      const paragraphCount = actualSection.content.filter(
+        (c) => c.type === "paragraph"
+      ).length;
       if (paragraphCount < min || (max !== Infinity && paragraphCount > max)) {
-        issues.push(`Paragraph count mismatch in ${sectionPath}: Expected ${formatRange(min, max)}, found ${paragraphCount}`);
+        issues.push(
+          `Paragraph count mismatch in ${sectionPath}: Expected ${formatRange(
+            min,
+            max
+          )}, found ${paragraphCount}`
+        );
       }
     }
 
     if (rules.code_blocks) {
       const [min, max] = parseRange(rules.code_blocks);
-      const codeBlockCount = actualSection.content.filter(c => c.type === 'code_block').length;
+      const codeBlockCount = actualSection.content.filter(
+        (c) => c.type === "code_block"
+      ).length;
       if (codeBlockCount < min || (max !== Infinity && codeBlockCount > max)) {
-        issues.push(`Code block count mismatch in ${sectionPath}: Expected ${formatRange(min, max)}, found ${codeBlockCount}`);
+        issues.push(
+          `Code block count mismatch in ${sectionPath}: Expected ${formatRange(
+            min,
+            max
+          )}, found ${codeBlockCount}`
+        );
       }
     }
 
-    if (rules.subheadings && rules.subheadings !== '*') {
+    if (rules.subheadings && rules.subheadings !== "*") {
       const [min, max] = parseRange(rules.subheadings);
       const subheadingCount = actualSection.children.length;
-      if (subheadingCount < min || (max !== Infinity && subheadingCount > max)) {
-        issues.push(`Subheading count mismatch in ${sectionPath}: Expected ${formatRange(min, max)}, found ${subheadingCount}`);
+      if (
+        subheadingCount < min ||
+        (max !== Infinity && subheadingCount > max)
+      ) {
+        issues.push(
+          `Subheading count mismatch in ${sectionPath}: Expected ${formatRange(
+            min,
+            max
+          )}, found ${subheadingCount}`
+        );
       }
     }
   }
@@ -134,11 +212,11 @@ function compareStructures(template, actual) {
 }
 
 function parseRange(rangeStr) {
-  if (rangeStr.endsWith('+')) {
+  if (rangeStr.endsWith("+")) {
     const min = parseInt(rangeStr);
     return [min, Infinity];
   }
-  const [min, max] = rangeStr.split('-').map(Number);
+  const [min, max] = rangeStr.split("-").map(Number);
   return [min, max || min];
 }
 
@@ -153,13 +231,13 @@ try {
   const issues = compareStructures(templateStructure, fileStructure);
 
   if (issues.length === 0) {
-    console.log('The markdown file structure matches the template.');
+    console.log("The markdown file structure matches the template.");
   } else {
-    console.log('Issues found:');
-    issues.forEach(issue => console.log(`- ${issue}`));
+    console.log("Issues found:");
+    issues.forEach((issue) => console.log(`- ${issue}`));
     process.exit(1);
   }
 } catch (error) {
-  console.error('An error occurred:', error.message);
+  console.error("An error occurred:", error.message);
   process.exit(1);
 }

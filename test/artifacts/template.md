@@ -53,6 +53,14 @@ Common issues and solutions
 
 Guidelines for contributing
 
+<!-- template:
+optional: true
+-->
+
+## FAQ
+
+Frequently asked questions
+
 ## License
 
 Project license information
