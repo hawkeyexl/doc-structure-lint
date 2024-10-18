@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 
 templates:                            # Array of templates, each with a unique key
-- How-to:                             # Initial template definition correspondings to the H1 level of the document
+  How-to:                             # Initial template definition correspondings to the H1 level of the document
     description: A template for how-to guides that include prerequisites, setup, usage, troubleshooting, and next steps sections.
     paragraphs:
       min: 2
@@ -12,14 +12,14 @@ templates:                            # Array of templates, each with a unique k
     code_blocks:
       max: 1                          # Allow a maximum of 1 code block
     sections:                         # Array of sections, each with a unique key
-    - Prerequisites:                  # Each section corresponds to a heading level one below the parent, in this case Prerequisites is an H2
+      Prerequisites:                  # Each section corresponds to a heading level one below the parent, in this case Prerequisites is an H2
         title: Prerequisites          # Require the section to be titled "Prerequisites"
         paragraphs:
           max: 3
-    - Setup:
+      Setup:
         paragraphs:
           max: 5                      # Allow a maximum of 5 paragraphs
-    - Usage:
+      Usage:
         paragraphs:
           max: 3
         code_blocks:
@@ -31,7 +31,7 @@ templates:                            # Array of templates, each with a unique k
             title: Troubleshooting    # Require the section to be titled "Troubleshooting"
             paragraphs:
               max: 5
-    - $ref: '#/components/sections/Next steps'   # Reference the 'Next steps' section component
+      $ref: '#/components/sections/Next steps'   # Reference the 'Next steps' section component
 
 components:
   sections:
