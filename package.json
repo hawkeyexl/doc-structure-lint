@@ -12,7 +12,9 @@
   },
   "author": "Manny Silva",
   "license": "MIT",
+  "type": "module",
   "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "ajv": "^8.17.1",
     "chai": "^5.1.1",
     "markdown-it": "^14.1.0",
