@@ -1,243 +1,286 @@
-#!/usr/bin/env node
+import { fileURLToPath } from "url";
+import { readFileSync } from "fs";
+import path from "path";
+import MarkdownIt from "markdown-it";
+import Ajv from "ajv";
+import yargs from "yargs/yargs";
+import { hideBin } from "yargs/helpers";
+import { parse } from "yaml";
+import { dereference } from "@apidevtools/json-schema-ref-parser";
 
-const fs = require("fs");
-const path = require("path");
-const { program } = require("commander");
-const markdownIt = require("markdown-it");
+const md = new MarkdownIt();
+const ajv = new Ajv();
 
-program
-  .version("1.0.0")
-  .description("Compare the structure of a markdown file against a template")
-  .requiredOption("-t, --template <path>", "Path to the template markdown file")
-  .requiredOption("-f, --file <path>", "Path to the markdown file to check")
-  .parse(process.argv);
+const schema = {
+  description: "A section of a document",
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    description: {
+      description: "Description of the section",
+      type: "string",
+    },
+    title: {
+      description: "Exact title of the section",
+      type: "string",
+    },
+    required: {
+      description: "Whether the section is required",
+      type: "boolean",
+      default: true,
+    },
+    paragraphs: {
+      type: "object",
+      properties: {
+        min: {
+          description: "Minimum number of paragraphs",
+          type: "integer",
+          minimum: 0,
+        },
+        max: {
+          description: "Maximum number of paragraphs",
+          type: "integer",
+        },
+      },
+    },
+    code_blocks: {
+      description: "Code block requirements",
+      type: "object",
+      properties: {
+        min: {
+          description: "Minimum number of code blocks",
+          type: "integer",
+          minimum: 0,
+        },
+        max: {
+          description: "Maximum number of code blocks",
+          type: "integer",
+        },
+      },
+    },
+    additional_sections: {
+      description: "Allow undefined sections",
+      type: "boolean",
+      default: false,
+    },
+    sections: {
+      description: "Array of subsections",
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: {
+          $ref: "#",
+        },
+      },
+    },
+  },
+};
 
-const options = program.opts();
+// Load and parse the template
+let templateDescriptions = parse(
+  readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "templates.yaml"),
+    "utf8"
+  )
+);
 
-function parseMarkdown(filePath) {
-  const content = fs.readFileSync(filePath, "utf8");
-  const md = new markdownIt();
-  const tokens = md.parse(content, {});
-  return extractStructure(tokens);
-}
+templateDescriptions = await dereference(templateDescriptions);
 
-function extractStructure(tokens) {
-  const structure = [];
-  let currentLevel = { level: 0, children: structure, content: [] };
-  const stack = [currentLevel];
+// Validate the template against the schema
+const validateTemplate = ajv.compile(schema);
 
-  tokens.forEach((token) => {
-    if (token.type === "heading_open") {
-      const level = parseInt(token.tag.slice(1));
-      const newLevel = { level, title: "", children: [], content: [] };
-
-      while (currentLevel.level >= level) {
-        stack.pop();
-        currentLevel = stack[stack.length - 1];
-      }
-
-      currentLevel.children.push(newLevel);
-      stack.push(newLevel);
-      currentLevel = newLevel;
-    } else if (
-      token.type === "inline" &&
-      stack[stack.length - 1].title === ""
-    ) {
-      stack[stack.length - 1].title = token.content;
-    } else if (token.type === "paragraph_open") {
-      currentLevel.content.push({ type: "paragraph", content: "" });
-    } else if (token.type === "fence") {
-      currentLevel.content.push({ type: "code_block", content: token.content });
-    } else if (token.type === "inline" && currentLevel.content.length > 0) {
-      const lastContent = currentLevel.content[currentLevel.content.length - 1];
-      if (lastContent.type === "paragraph") {
-        lastContent.content += token.content;
-      }
-    } else if (
-      token.type === "html_block" &&
-      token.content.trim().startsWith("<!-- template:")
-    ) {
-      currentLevel.template = parseTemplateComment(token.content);
-    }
-  });
-
-  return structure;
-}
-
-function parseTemplateComment(comment) {
-  const template = {};
-  const lines = comment.trim().split("\n");
-  lines.slice(1, -1).forEach((line) => {
-    const [key, value] = line.split(":").map((s) => s.trim());
-    template[key] = value === "true" ? true : value === "false" ? false : value;
-  });
-  return template;
-}
-
-function compareStructures(template, actual) {
-  const issues = [];
-
-  function compare(templateSection, actualSection, path = []) {
-    if (!actualSection) {
-      if (templateSection.template && templateSection.template.optional) {
-        return; // Optional section is missing, which is allowed
-      }
-      issues.push(`Missing section: ${path.join(" > ")}`);
-      return;
-    }
-
-    if (
-      templateSection.title &&
-      templateSection.title !== actualSection.title
-    ) {
-      issues.push(
-        `Title mismatch at ${path.join(" > ")}: Expected "${
-          templateSection.title
-        }", found "${actualSection.title}"`
-      );
-    }
-
-    if (templateSection.template) {
-      checkTemplateRules(templateSection, actualSection, path);
-    }
-
-    if (
-      templateSection.template &&
-      templateSection.template.subheadings === "*"
-    ) {
-      // Allow any number of subheadings at any level
-      return;
-    }
-
-    let actualIndex = 0;
-    templateSection.children.forEach((templateChild) => {
-      if (templateChild.template && templateChild.template.optional) {
-        // For optional sections, find the matching section in the actual document
-        const matchingActualChild = actualSection.children.find(
-          (child) => child.title === templateChild.title
-        );
-        if (matchingActualChild) {
-          compare(templateChild, matchingActualChild, [
-            ...path,
-            templateChild.title,
-          ]);
-        }
-      } else {
-        // For required sections, compare in order
-        const actualChild = actualSection.children[actualIndex];
-        compare(templateChild, actualChild, [
-          ...path,
-          templateChild.title || `Section ${actualIndex + 1}`,
-        ]);
-        actualIndex++;
-      }
-    });
-
-    // Check for extra non-optional sections
-    if (actualSection.children.length > actualIndex) {
-      const extraSections = actualSection.children
-        .slice(actualIndex)
-        .filter(
-          (child) =>
-            !templateSection.children.some(
-              (templateChild) =>
-                templateChild.template &&
-                templateChild.template.optional &&
-                templateChild.title === child.title
-            )
-        );
-      if (extraSections.length > 0) {
-        issues.push(
-          `Extra sections found in ${path.join(" > ")}: ${extraSections
-            .map((s) => s.title)
-            .join(", ")}`
-        );
-      }
-    }
-  }
-
-  function checkTemplateRules(templateSection, actualSection, path) {
-    const rules = templateSection.template;
-    const sectionPath = path.join(" > ");
-
-    if (rules.paragraphs) {
-      const [min, max] = parseRange(rules.paragraphs);
-      const paragraphCount = actualSection.content.filter(
-        (c) => c.type === "paragraph"
-      ).length;
-      if (paragraphCount < min || (max !== Infinity && paragraphCount > max)) {
-        issues.push(
-          `Paragraph count mismatch in ${sectionPath}: Expected ${formatRange(
-            min,
-            max
-          )}, found ${paragraphCount}`
-        );
-      }
-    }
-
-    if (rules.code_blocks) {
-      const [min, max] = parseRange(rules.code_blocks);
-      const codeBlockCount = actualSection.content.filter(
-        (c) => c.type === "code_block"
-      ).length;
-      if (codeBlockCount < min || (max !== Infinity && codeBlockCount > max)) {
-        issues.push(
-          `Code block count mismatch in ${sectionPath}: Expected ${formatRange(
-            min,
-            max
-          )}, found ${codeBlockCount}`
-        );
-      }
-    }
-
-    if (rules.subheadings && rules.subheadings !== "*") {
-      const [min, max] = parseRange(rules.subheadings);
-      const subheadingCount = actualSection.children.length;
-      if (
-        subheadingCount < min ||
-        (max !== Infinity && subheadingCount > max)
-      ) {
-        issues.push(
-          `Subheading count mismatch in ${sectionPath}: Expected ${formatRange(
-            min,
-            max
-          )}, found ${subheadingCount}`
-        );
-      }
-    }
-  }
-
-  compare({ level: 0, children: template }, { level: 0, children: actual });
-  return issues;
-}
-
-function parseRange(rangeStr) {
-  if (rangeStr.endsWith("+")) {
-    const min = parseInt(rangeStr);
-    return [min, Infinity];
-  }
-  const [min, max] = rangeStr.split("-").map(Number);
-  return [min, max || min];
-}
-
-function formatRange(min, max) {
-  return max === Infinity ? `${min}+` : min === max ? min : `${min}-${max}`;
-}
-
-try {
-  const templateStructure = parseMarkdown(options.template);
-  const fileStructure = parseMarkdown(options.file);
-
-  const issues = compareStructures(templateStructure, fileStructure);
-
-  if (issues.length === 0) {
-    console.log("The markdown file structure matches the template.");
-  } else {
-    console.log("Issues found:");
-    issues.forEach((issue) => console.log(`- ${issue}`));
+for (const [key, value] of Object.entries(templateDescriptions.templates)) {
+  console.log(JSON.stringify(key, null, 2));
+  if (!validateTemplate(value)) {
+    console.error(`Template "${key}" is invalid:`, validateTemplate.errors);
     process.exit(1);
   }
-} catch (error) {
-  console.error("An error occurred:", error.message);
+}
+
+function parseMarkdown(content) {
+  const tokens = md.parse(content, {});
+  const sections = [];
+  let currentSection = null;
+
+  for (const token of tokens) {
+    if (token.type === "heading_open") {
+      if (currentSection) {
+        sections.push(currentSection);
+      }
+      currentSection = {
+        title: "",
+        level: parseInt(token.tag.slice(1)),
+        paragraphs: 0,
+        code_blocks: 0,
+        subsections: [],
+      };
+    } else if (
+      token.type === "inline" &&
+      currentSection &&
+      !currentSection.title
+    ) {
+      currentSection.title = token.content;
+    } else if (token.type === "paragraph_open") {
+      currentSection.paragraphs++;
+    } else if (token.type === "fence") {
+      currentSection.code_blocks++;
+    }
+  }
+
+  if (currentSection) {
+    sections.push(currentSection);
+  }
+
+  return organizeHierarchy(sections);
+}
+
+function organizeHierarchy(sections) {
+  const root = { subsections: [] };
+  const stack = [root];
+
+  for (const section of sections) {
+    while (stack.length > 1 && stack[stack.length - 1].level >= section.level) {
+      stack.pop();
+    }
+    const parent = stack[stack.length - 1];
+    parent.subsections.push(section);
+    stack.push(section);
+  }
+
+  return root.subsections[0];
+}
+
+function validateStructure(section, template, path = []) {
+  const errors = [];
+
+  // Check title
+  if (template.title && section.title !== template.title) {
+    errors.push(
+      `${path.join(" > ")}: Expected title "${template.title}", but found "${
+        section.title
+      }"`
+    );
+  }
+
+  // Check paragraphs
+  if (template.paragraphs) {
+    if (
+      template.paragraphs.min &&
+      section.paragraphs < template.paragraphs.min
+    ) {
+      errors.push(
+        `${path.join(" > ")}: Expected at least ${
+          template.paragraphs.min
+        } paragraphs, but found ${section.paragraphs}`
+      );
+    }
+    if (
+      template.paragraphs.max &&
+      section.paragraphs > template.paragraphs.max
+    ) {
+      errors.push(
+        `${path.join(" > ")}: Expected at most ${
+          template.paragraphs.max
+        } paragraphs, but found ${section.paragraphs}`
+      );
+    }
+  }
+
+  // Check code blocks
+  if (template.code_blocks) {
+    if (
+      template.code_blocks.min &&
+      section.code_blocks < template.code_blocks.min
+    ) {
+      errors.push(
+        `${path.join(" > ")}: Expected at least ${
+          template.code_blocks.min
+        } code blocks, but found ${section.code_blocks}`
+      );
+    }
+    if (
+      template.code_blocks.max &&
+      section.code_blocks > template.code_blocks.max
+    ) {
+      errors.push(
+        `${path.join(" > ")}: Expected at most ${
+          template.code_blocks.max
+        } code blocks, but found ${section.code_blocks}`
+      );
+    }
+  }
+
+  // Check subsections
+  if (template.sections) {
+    const expectedSections = new Set(
+      template.sections.map((s) => Object.keys(s)[0])
+    );
+    const foundSections = new Set(section.subsections.map((s) => s.title));
+
+    for (const expectedSection of expectedSections) {
+      if (
+        !foundSections.has(expectedSection) &&
+        template.sections.find((s) => s[expectedSection].required !== false)
+      ) {
+        errors.push(
+          `${path.join(" > ")}: Missing required section "${expectedSection}"`
+        );
+      }
+    }
+
+    if (!template.additional_sections) {
+      for (const foundSection of foundSections) {
+        if (!expectedSections.has(foundSection)) {
+          errors.push(
+            `${path.join(" > ")}: Unexpected section "${foundSection}"`
+          );
+        }
+      }
+    }
+
+    for (const subsection of section.subsections) {
+      const subsectionTemplate = template.sections.find(
+        (s) => s[subsection.title]
+      );
+      if (subsectionTemplate) {
+        errors.push(
+          ...validateStructure(
+            subsection,
+            subsectionTemplate[subsection.title],
+            [...path, subsection.title]
+          )
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+function lintMarkdown(content, template) {
+  const structure = parseMarkdown(content);
+  return validateStructure(structure, template.templates[0]["How-to"]);
+}
+
+// Parse command-line arguments
+const argv = yargs(hideBin(process.argv))
+  .option("file", {
+    alias: "f",
+    description: "Path to the markdown file to lint",
+    type: "string",
+    demandOption: true,
+  })
+  .help()
+  .alias("help", "h").argv;
+
+// Read and lint the markdown file
+const markdownContent = readFileSync(argv.file, "utf8");
+const errors = lintMarkdown(markdownContent, template);
+
+if (errors.length > 0) {
+  console.log("Structure violations found:");
+  errors.forEach((error) => console.log(`- ${error}`));
   process.exit(1);
+} else {
+  console.log("No structure violations found.");
 }
