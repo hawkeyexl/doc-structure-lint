@@ -1,21 +1,23 @@
 {
   "name": "markdown-structure-lint",
   "version": "1.0.0",
-  "description": "Lint markdown files for structure.",
-  "bin":{
-    "markdown-structure-lint": "./index.js"
+  "description": "A tool to validate markdown structure against a specified template",
+  "bin": {
+    "markdown-structure-lint": "index.js"
   },
-  "main": "./index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "./index.js",
+    "start": "node index.js",
     "test": "mocha"
   },
   "author": "Manny Silva",
   "license": "MIT",
   "dependencies": {
+    "ajv": "^8.17.1",
     "chai": "^5.1.1",
-    "commander": "^12.1.0",
     "markdown-it": "^14.1.0",
-    "mocha": "^10.7.3"
+    "mocha": "^10.7.3",
+    "yaml": "^2.6.0",
+    "yargs": "^17.7.2"
   }
 }
