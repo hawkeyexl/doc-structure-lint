@@ -35,8 +35,8 @@ templates:                            # Array of templates, each with a unique k
 
 components:
   sections:
-  - Next steps:
-    title: Next steps             # Back to an H2 level section
-    required: false               # Allow the section to be omitted
-    paragraphs:
-      min: 2
+    Next steps:
+      title: Next steps             # Back to an H2 level section
+      required: false               # Allow the section to be omitted
+      paragraphs:
+        min: 2
