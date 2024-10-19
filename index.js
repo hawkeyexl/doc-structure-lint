@@ -79,7 +79,7 @@ const schema = {
           default: false,
         },
         sections: {
-          description: "Array of subsections",
+          description: "Object of subsections",
           type: "object",
           patternProperties: {
             "^[A-Za-z-_]+": {
@@ -174,9 +174,9 @@ function validateStructure(section, template, path = []) {
   const errors = [];
 
   // Check title
-  if (template.title && section.title !== template.title) {
+  if (template.title && template.title.const && section.title !== template.title.const) {
     errors.push(
-      `${path.join(" > ")}: Expected title "${template.title}", but found "${
+      `${path.join(" > ")}: Expected title "${template.title.const}", but found "${
         section.title
       }"`
     );
@@ -232,15 +232,13 @@ function validateStructure(section, template, path = []) {
 
   // Check subsections
   if (template.sections) {
-    const expectedSections = new Set(
-      template.sections.map((s) => Object.keys(s)[0])
-    );
+    const expectedSections = new Set(Object.keys(template.sections));
     const foundSections = new Set(section.subsections.map((s) => s.title));
 
     for (const expectedSection of expectedSections) {
       if (
         !foundSections.has(expectedSection) &&
-        template.sections.find((s) => s[expectedSection].required !== false)
+        template.sections[expectedSection].required !== false
       ) {
         errors.push(
           `${path.join(" > ")}: Missing required section "${expectedSection}"`
@@ -248,7 +246,7 @@ function validateStructure(section, template, path = []) {
       }
     }
 
-    if (!template.additional_sections) {
+    if (!template.additionalSections) {
       for (const foundSection of foundSections) {
         if (!expectedSections.has(foundSection)) {
           errors.push(
@@ -259,14 +257,12 @@ function validateStructure(section, template, path = []) {
     }
 
     for (const subsection of section.subsections) {
-      const subsectionTemplate = template.sections.find(
-        (s) => s[subsection.title]
-      );
+      const subsectionTemplate = template.sections[subsection.title];
       if (subsectionTemplate) {
         errors.push(
           ...validateStructure(
             subsection,
-            subsectionTemplate[subsection.title],
+            subsectionTemplate,
             [...path, subsection.title]
           )
         );
@@ -277,9 +273,13 @@ function validateStructure(section, template, path = []) {
   return errors;
 }
 
-function lintMarkdown(content, template) {
+function lintMarkdown(content, templateName) {
   const structure = parseMarkdown(content);
-  return validateStructure(structure, template.templates[0]["How-to"]);
+  const template = templateDescriptions.templates[templateName];
+  if (!template) {
+    throw new Error(`Template "${templateName}" not found`);
+  }
+  return validateStructure(structure, template);
 }
 
 // Parse command-line arguments
@@ -301,7 +301,7 @@ const argv = yargs(hideBin(process.argv))
 
 // Read and lint the markdown file
 const markdownContent = readFileSync(argv.file, "utf8");
-const errors = lintMarkdown(markdownContent, templateDescriptions)
+const errors = lintMarkdown(markdownContent, argv.template);
 
 if (errors.length > 0) {
   console.log("Structure violations found:");
