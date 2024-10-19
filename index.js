@@ -12,64 +12,75 @@ const md = new MarkdownIt();
 const ajv = new Ajv();
 
 const schema = {
-  description: "A section of a document",
   type: "object",
-  additionalProperties: false,
-  properties: {
-    description: {
-      description: "Description of the section",
-      type: "string",
-    },
-    title: {
-      description: "Exact title of the section",
-      type: "string",
-    },
-    required: {
-      description: "Whether the section is required",
-      type: "boolean",
-      default: true,
-    },
-    paragraphs: {
+  patternProperties: {
+    "^.*$": {
+      description: "A section of a document",
       type: "object",
+      additionalProperties: false,
       properties: {
-        min: {
-          description: "Minimum number of paragraphs",
-          type: "integer",
-          minimum: 0,
+        description: {
+          description: "Description of the section",
+          type: "string",
         },
-        max: {
-          description: "Maximum number of paragraphs",
-          type: "integer",
+        title: {
+          description: "Exact title of the section",
+          type: "string",
         },
-      },
-    },
-    code_blocks: {
-      description: "Code block requirements",
-      type: "object",
-      properties: {
-        min: {
-          description: "Minimum number of code blocks",
-          type: "integer",
-          minimum: 0,
+        required: {
+          description: "Whether the section is required",
+          type: "boolean",
+          default: true,
         },
-        max: {
-          description: "Maximum number of code blocks",
-          type: "integer",
+        paragraphs: {
+          type: "object",
+          properties: {
+            min: {
+              description: "Minimum number of paragraphs",
+              type: "integer",
+              minimum: 0,
+            },
+            max: {
+              description: "Maximum number of paragraphs",
+              type: "integer",
+            },
+          },
         },
-      },
-    },
-    additional_sections: {
-      description: "Allow undefined sections",
-      type: "boolean",
-      default: false,
-    },
-    sections: {
-      description: "Array of subsections",
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: {
-          $ref: "#",
+        code_blocks: {
+          description: "Code block requirements",
+          type: "object",
+          properties: {
+            min: {
+              description: "Minimum number of code blocks",
+              type: "integer",
+              minimum: 0,
+            },
+            max: {
+              description: "Maximum number of code blocks",
+              type: "integer",
+            },
+          },
+        },
+        additionalSections: {
+          description: "Allow undefined sections",
+          type: "boolean",
+          default: false,
+        },
+        sections: {
+          description: "Array of subsections",
+          type: "object",
+          patternProperties: {
+            "^.*$": {
+              anyOf: [
+                {
+                  $ref: "#",
+                },
+                {
+                  type: "null",
+                },
+              ],
+            },
+          },
         },
       },
     },
@@ -89,14 +100,25 @@ templateDescriptions = await dereference(templateDescriptions);
 // Validate the template against the schema
 const validateTemplate = ajv.compile(schema);
 
-for (const [key, value] of Object.entries(templateDescriptions.templates)) {
-  console.log(JSON.stringify(key, null, 2));
-  if (!validateTemplate(value)) {
-    console.error(`Template "${key}" is invalid:`, validateTemplate.errors);
+for (const templateName in templateDescriptions.templates) {
+  const template = {};
+  template[templateName] = templateDescriptions.templates[templateName];
+  if (!validateTemplate(template)) {
+    console.error(JSON.stringify(template));
+    console.error(`Template is invalid:`, validateTemplate.errors);
     process.exit(1);
   }
 }
 
+// for (const [key, value] of Object.entries(templateDescriptions.templates)) {
+//   console.log(JSON.stringify(value, null, 2));
+//   if (!validateTemplate(value)) {
+//     console.error(`Template "${key}" is invalid:`, validateTemplate.errors);
+//     process.exit(1);
+//   }
+// }
+
+process.exit();
 function parseMarkdown(content) {
   const tokens = md.parse(content, {});
   const sections = [];
