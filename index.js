@@ -117,15 +117,6 @@ for (const templateName in templateDescriptions.templates) {
   }
 }
 
-// for (const [key, value] of Object.entries(templateDescriptions.templates)) {
-//   console.log(JSON.stringify(value, null, 2));
-//   if (!validateTemplate(value)) {
-//     console.error(`Template "${key}" is invalid:`, validateTemplate.errors);
-//     process.exit(1);
-//   }
-// }
-
-process.exit();
 function parseMarkdown(content) {
   const tokens = md.parse(content, {});
   const sections = [];
@@ -299,12 +290,18 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     demandOption: true,
   })
+  .option("template", {
+    alias: "t",
+    description: "Name of the template to use",
+    type: "string",
+    demandOption: true,
+  })
   .help()
   .alias("help", "h").argv;
 
 // Read and lint the markdown file
 const markdownContent = readFileSync(argv.file, "utf8");
-const errors = lintMarkdown(markdownContent, template);
+const errors = lintMarkdown(markdownContent, templateDescriptions)
 
 if (errors.length > 0) {
   console.log("Structure violations found:");
