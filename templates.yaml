@@ -32,12 +32,14 @@ templates:                            # Array of templates, each with a unique k
               const: Troubleshooting    # Require the section to be titled "Troubleshooting"
             paragraphs:
               max: 5
-      $ref: '#/components/sections/Next steps'   # Reference the 'Next steps' section component
+      Next steps:
+        $ref: '#/components/sections/Next steps'   # Reference the 'Next steps' section component
 
 components:
   sections:
     Next steps:
-      title: Next steps             # Back to an H2 level section
+      title: 
+        const: Next steps             # Back to an H2 level section
       required: false               # Allow the section to be omitted
       paragraphs:
         min: 2

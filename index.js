@@ -31,7 +31,13 @@ const schema = {
         },
         title: {
           description: "Exact title of the section",
-          type: "string",
+          type: "object",
+          properties: {
+            const: {
+              description: "Exact title of the section",
+              type: "string",
+            },
+          },
         },
         required: {
           description: "Whether the section is required",
