@@ -13,9 +13,15 @@ const ajv = new Ajv();
 
 const schema = {
   type: "object",
+  additionalProperties: false,
   patternProperties: {
-    "^.*$": {
-      description: "A section of a document",
+    "^[A-Za-z-_]+$": {
+      $ref: "#/definitions/section",
+    }
+  },
+  definitions: {
+    section: {
+      description: "A section of a document demarkated by a heading",
       type: "object",
       additionalProperties: false,
       properties: {
@@ -70,14 +76,9 @@ const schema = {
           description: "Array of subsections",
           type: "object",
           patternProperties: {
-            "^.*$": {
+            "^[A-Za-z-_]+": {
               anyOf: [
-                {
-                  $ref: "#",
-                },
-                {
-                  type: "null",
-                },
+                { $ref: "#/definitions/section" },
               ],
             },
           },

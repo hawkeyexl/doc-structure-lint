@@ -13,7 +13,8 @@ templates:                            # Array of templates, each with a unique k
       max: 1                          # Allow a maximum of 1 code block
     sections:                         # Array of sections, each with a unique key
       Prerequisites:                  # Each section corresponds to a heading level one below the parent, in this case Prerequisites is an H2
-        title: Prerequisites          # Require the section to be titled "Prerequisites"
+        title: 
+          const: Prerequisites          # Require the section to be titled "Prerequisites"
         paragraphs:
           max: 3
       Setup:
@@ -24,11 +25,11 @@ templates:                            # Array of templates, each with a unique k
           max: 3
         code_blocks:
           min: 1                      # Require at least one code block
-        additional_sections: true     # Allow additional use case sections
+        additionalSections: true     # Allow additional use case sections
         sections:
-          Use case n:                 # An H3 with no requirements/restrictions
           Troubleshooting:
-            title: Troubleshooting    # Require the section to be titled "Troubleshooting"
+            title: 
+              const: Troubleshooting    # Require the section to be titled "Troubleshooting"
             paragraphs:
               max: 5
       $ref: '#/components/sections/Next steps'   # Reference the 'Next steps' section component
