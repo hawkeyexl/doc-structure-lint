@@ -26,8 +26,8 @@ templates:                            # Array of templates, each with a unique k
           min: 1                      # Require at least one code block
         additional_sections: true     # Allow additional use case sections
         sections:
-        - Use case n:                 # An H3 with no requirements/restrictions
-        - Troubleshooting:
+          Use case n:                 # An H3 with no requirements/restrictions
+          Troubleshooting:
             title: Troubleshooting    # Require the section to be titled "Troubleshooting"
             paragraphs:
               max: 5
