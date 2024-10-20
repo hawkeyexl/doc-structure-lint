@@ -9,7 +9,6 @@ Markdown Structure Linter is a tool designed to validate the structure of markdo
 - Flexible template definitions using YAML
 - Output results in both human-readable text and structured JSON formats
 - Provide precise location information with start and end character indexes for each heading
-- Can be used as a CLI tool or imported as a module in other projects
 
 ## Installation
 
@@ -26,21 +25,19 @@ Markdown Structure Linter is a tool designed to validate the structure of markdo
 
 ## Usage
 
-### As a CLI Tool
-
-To use the Markdown Structure Linter as a CLI tool, you need a markdown file to lint and a template to lint against. The basic command structure is:
+To use the Markdown Structure Linter, you need a markdown file to lint and a template to lint against. The basic command structure is:
 
 ```
 node index.js --file <path-to-markdown> --template <template-name>
 ```
 
-#### Options
+### Options
 
 - `--file` or `-f`: Path to the markdown file to lint (required)
 - `--template` or `-t`: Name of the template to use (required)
 - `--json`: Output results in JSON format (optional)
 
-#### Examples
+### Examples
 
 1. Lint a markdown file using the "How-to" template:
    ```
@@ -51,31 +48,6 @@ node index.js --file <path-to-markdown> --template <template-name>
    ```
    node index.js --file ./docs/api-reference.md --template API-doc --json
    ```
-
-### As a Module
-
-You can also use the Markdown Structure Linter as a module in your Node.js projects. First, install it as a dependency:
-
-```
-npm install markdown-structure-linter
-```
-
-Then, you can import and use it in your JavaScript code:
-
-```javascript
-import { markdownStructureLinter } from 'markdown-structure-linter';
-
-const markdownContent = '# Your Markdown Content\n\nSome text here...';
-const templateName = 'Your-Template-Name';
-
-// For text output
-const textResult = markdownStructureLinter(markdownContent, templateName);
-console.log(textResult);
-
-// For JSON output
-const jsonResult = markdownStructureLinter(markdownContent, templateName, 'json');
-console.log(JSON.stringify(jsonResult, null, 2));
-```
 
 ## Templates
 
@@ -92,17 +64,17 @@ For more information on creating and modifying templates, refer to the comments 
 
 ### Text Output (Default)
 
-When used without specifying JSON output, the linter provides human-readable output:
+When run without the `--json` flag, the linter provides human-readable output:
 
 ```
 Structure violations found:
-[Introduction] (start: 0, end: 150): Expected at least 2 paragraphs, but found 1
-[Usage] (start: 151, end: 500): Missing required section "Examples"
+- [Introduction] (start: 0, end: 150): Expected at least 2 paragraphs, but found 1
+- [Usage] (start: 151, end: 500): Missing required section "Examples"
 ```
 
 ### JSON Output
 
-When JSON output is specified, the linter returns a structured object:
+When run with the `--json` flag, the linter outputs structured JSON:
 
 ```json
 {
