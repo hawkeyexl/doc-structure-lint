@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "mocha"
+    "test": "mocha test/**/*.test.js"
   },
   "author": "Manny Silva",
   "license": "MIT",
