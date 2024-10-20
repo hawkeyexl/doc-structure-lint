@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "mocha test/**/*.test.js"
+    "test": "mocha src/**/*.test.js"
   },
   "author": "Manny Silva",
   "license": "MIT",
@@ -16,10 +16,13 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "ajv": "^8.17.1",
-    "chai": "^5.1.1",
     "markdown-it": "^14.1.0",
-    "mocha": "^10.7.3",
     "yaml": "^2.6.0",
     "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "sinon": "^19.0.2",
+    "chai": "^5.1.1",
+    "mocha": "^10.7.3"
   }
 }
