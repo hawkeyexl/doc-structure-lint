@@ -121,6 +121,7 @@ function parseMarkdown(content) {
   const tokens = md.parse(content, {});
   const sections = [];
   let currentSection = null;
+  let index = 0;
 
   for (const token of tokens) {
     if (token.type === "heading_open") {
@@ -133,6 +134,7 @@ function parseMarkdown(content) {
         paragraphs: 0,
         code_blocks: 0,
         subsections: [],
+        index: index,
       };
     } else if (
       token.type === "inline" &&
@@ -145,6 +147,7 @@ function parseMarkdown(content) {
     } else if (token.type === "fence") {
       currentSection.code_blocks++;
     }
+    index++;
   }
 
   if (currentSection) {
@@ -175,11 +178,11 @@ function validateStructure(section, template, path = []) {
 
   // Check title
   if (template.title && template.title.const && section.title !== template.title.const) {
-    errors.push(
-      `${path.join(" > ")}: Expected title "${template.title.const}", but found "${
-        section.title
-      }"`
-    );
+    errors.push({
+      head: section.title,
+      index: section.index,
+      message: `Expected title "${template.title.const}", but found "${section.title}"`,
+    });
   }
 
   // Check paragraphs
@@ -188,21 +191,21 @@ function validateStructure(section, template, path = []) {
       template.paragraphs.min &&
       section.paragraphs < template.paragraphs.min
     ) {
-      errors.push(
-        `${path.join(" > ")}: Expected at least ${
-          template.paragraphs.min
-        } paragraphs, but found ${section.paragraphs}`
-      );
+      errors.push({
+        head: section.title,
+        index: section.index,
+        message: `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs}`,
+      });
     }
     if (
       template.paragraphs.max &&
       section.paragraphs > template.paragraphs.max
     ) {
-      errors.push(
-        `${path.join(" > ")}: Expected at most ${
-          template.paragraphs.max
-        } paragraphs, but found ${section.paragraphs}`
-      );
+      errors.push({
+        head: section.title,
+        index: section.index,
+        message: `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs}`,
+      });
     }
   }
 
@@ -212,21 +215,21 @@ function validateStructure(section, template, path = []) {
       template.code_blocks.min &&
       section.code_blocks < template.code_blocks.min
     ) {
-      errors.push(
-        `${path.join(" > ")}: Expected at least ${
-          template.code_blocks.min
-        } code blocks, but found ${section.code_blocks}`
-      );
+      errors.push({
+        head: section.title,
+        index: section.index,
+        message: `Expected at least ${template.code_blocks.min} code blocks, but found ${section.code_blocks}`,
+      });
     }
     if (
       template.code_blocks.max &&
       section.code_blocks > template.code_blocks.max
     ) {
-      errors.push(
-        `${path.join(" > ")}: Expected at most ${
-          template.code_blocks.max
-        } code blocks, but found ${section.code_blocks}`
-      );
+      errors.push({
+        head: section.title,
+        index: section.index,
+        message: `Expected at most ${template.code_blocks.max} code blocks, but found ${section.code_blocks}`,
+      });
     }
   }
 
@@ -240,18 +243,23 @@ function validateStructure(section, template, path = []) {
         !foundSections.has(expectedSection) &&
         template.sections[expectedSection].required !== false
       ) {
-        errors.push(
-          `${path.join(" > ")}: Missing required section "${expectedSection}"`
-        );
+        errors.push({
+          head: section.title,
+          index: section.index,
+          message: `Missing required section "${expectedSection}"`,
+        });
       }
     }
 
     if (!template.additionalSections) {
       for (const foundSection of foundSections) {
         if (!expectedSections.has(foundSection)) {
-          errors.push(
-            `${path.join(" > ")}: Unexpected section "${foundSection}"`
-          );
+          const unexpectedSection = section.subsections.find(s => s.title === foundSection);
+          errors.push({
+            head: unexpectedSection.title,
+            index: unexpectedSection.index,
+            message: `Unexpected section "${foundSection}"`,
+          });
         }
       }
     }
@@ -296,6 +304,11 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     demandOption: true,
   })
+  .option("json", {
+    description: "Output results in JSON format",
+    type: "boolean",
+    default: false,
+  })
   .help()
   .alias("help", "h").argv;
 
@@ -303,10 +316,20 @@ const argv = yargs(hideBin(process.argv))
 const markdownContent = readFileSync(argv.file, "utf8");
 const errors = lintMarkdown(markdownContent, argv.template);
 
-if (errors.length > 0) {
-  console.log("Structure violations found:");
-  errors.forEach((error) => console.log(`- ${error}`));
-  process.exit(1);
+if (argv.json) {
+  // Output results in JSON format
+  const result = {
+    success: errors.length === 0,
+    errors: errors,
+  };
+  console.log(JSON.stringify(result, null, 2));
 } else {
-  console.log("No structure violations found.");
+  // Output results in text format
+  if (errors.length > 0) {
+    console.log("Structure violations found:");
+    errors.forEach((error) => console.log(`- [${error.head}] (index: ${error.index}): ${error.message}`));
+    process.exit(1);
+  } else {
+    console.log("No structure violations found.");
+  }
 }
