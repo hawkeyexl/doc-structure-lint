@@ -49,6 +49,30 @@ node index.js --file <path-to-markdown> --template <template-name>
    node index.js --file ./docs/api-reference.md --template API-doc --json
    ```
 
+## Project Structure
+
+The project is organized into the following structure:
+
+```
+markdown-structure-linter/
+├── src/
+│   ├── schema.js
+│   ├── templateLoader.js
+│   ├── markdownParser.js
+│   └── structureValidator.js
+├── index.js
+├── templates.yaml
+├── package.json
+└── README.md
+```
+
+- `src/schema.js`: Defines the JSON schema for template validation
+- `src/templateLoader.js`: Handles loading and validating templates
+- `src/markdownParser.js`: Parses markdown content into a structured format
+- `src/structureValidator.js`: Validates the parsed markdown structure against the template
+- `index.js`: Main entry point that ties everything together
+- `templates.yaml`: Contains the template definitions
+
 ## Templates
 
 Templates are defined in the `templates.yaml` file. Each template specifies the expected structure of a markdown document, including:
