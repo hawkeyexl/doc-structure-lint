@@ -2,6 +2,8 @@
 
 This guide will walk you through the process of using our amazing product effectively.
 
+Follow along and be amazed!
+
 ## Prerequisites
 
 Before you begin, make sure you have the following:

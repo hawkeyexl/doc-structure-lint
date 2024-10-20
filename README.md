@@ -8,6 +8,7 @@ Markdown Structure Linter is a tool designed to validate the structure of markdo
 - Check for required sections, paragraph counts, and code block requirements
 - Flexible template definitions using YAML
 - Output results in both human-readable text and structured JSON formats
+- Provide precise location information with start and end character indexes for each heading
 
 ## Installation
 
@@ -67,8 +68,8 @@ When run without the `--json` flag, the linter provides human-readable output:
 
 ```
 Structure violations found:
-- [Introduction] (index: 0): Expected at least 2 paragraphs, but found 1
-- [Usage] (index: 42): Missing required section "Examples"
+- [Introduction] (start: 0, end: 150): Expected at least 2 paragraphs, but found 1
+- [Usage] (start: 151, end: 500): Missing required section "Examples"
 ```
 
 ### JSON Output
@@ -81,17 +82,21 @@ When run with the `--json` flag, the linter outputs structured JSON:
   "errors": [
     {
       "head": "Introduction",
-      "index": 0,
+      "startIndex": 0,
+      "endIndex": 150,
       "message": "Expected at least 2 paragraphs, but found 1"
     },
     {
       "head": "Usage",
-      "index": 42,
+      "startIndex": 151,
+      "endIndex": 500,
       "message": "Missing required section \"Examples\""
     }
   ]
 }
 ```
+
+The `startIndex` and `endIndex` properties provide the character positions of the start and end of each section, allowing for precise location of issues within the document.
 
 ## Contributing
 

@@ -121,11 +121,12 @@ function parseMarkdown(content) {
   const tokens = md.parse(content, {});
   const sections = [];
   let currentSection = null;
-  let index = 0;
+  let charIndex = 0;
 
   for (const token of tokens) {
     if (token.type === "heading_open") {
       if (currentSection) {
+        currentSection.endIndex = charIndex;
         sections.push(currentSection);
       }
       currentSection = {
@@ -134,7 +135,8 @@ function parseMarkdown(content) {
         paragraphs: 0,
         code_blocks: 0,
         subsections: [],
-        index: index,
+        startIndex: charIndex,
+        endIndex: null,
       };
     } else if (
       token.type === "inline" &&
@@ -147,10 +149,11 @@ function parseMarkdown(content) {
     } else if (token.type === "fence") {
       currentSection.code_blocks++;
     }
-    index++;
+    charIndex += token.content ? token.content.length : 0;
   }
 
   if (currentSection) {
+    currentSection.endIndex = charIndex;
     sections.push(currentSection);
   }
 
@@ -180,7 +183,8 @@ function validateStructure(section, template, path = []) {
   if (template.title && template.title.const && section.title !== template.title.const) {
     errors.push({
       head: section.title,
-      index: section.index,
+      startIndex: section.startIndex,
+      endIndex: section.endIndex,
       message: `Expected title "${template.title.const}", but found "${section.title}"`,
     });
   }
@@ -193,7 +197,8 @@ function validateStructure(section, template, path = []) {
     ) {
       errors.push({
         head: section.title,
-        index: section.index,
+        startIndex: section.startIndex,
+        endIndex: section.endIndex,
         message: `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs}`,
       });
     }
@@ -203,7 +208,8 @@ function validateStructure(section, template, path = []) {
     ) {
       errors.push({
         head: section.title,
-        index: section.index,
+        startIndex: section.startIndex,
+        endIndex: section.endIndex,
         message: `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs}`,
       });
     }
@@ -217,7 +223,8 @@ function validateStructure(section, template, path = []) {
     ) {
       errors.push({
         head: section.title,
-        index: section.index,
+        startIndex: section.startIndex,
+        endIndex: section.endIndex,
         message: `Expected at least ${template.code_blocks.min} code blocks, but found ${section.code_blocks}`,
       });
     }
@@ -227,7 +234,8 @@ function validateStructure(section, template, path = []) {
     ) {
       errors.push({
         head: section.title,
-        index: section.index,
+        startIndex: section.startIndex,
+        endIndex: section.endIndex,
         message: `Expected at most ${template.code_blocks.max} code blocks, but found ${section.code_blocks}`,
       });
     }
@@ -245,7 +253,8 @@ function validateStructure(section, template, path = []) {
       ) {
         errors.push({
           head: section.title,
-          index: section.index,
+          startIndex: section.startIndex,
+          endIndex: section.endIndex,
           message: `Missing required section "${expectedSection}"`,
         });
       }
@@ -257,7 +266,8 @@ function validateStructure(section, template, path = []) {
           const unexpectedSection = section.subsections.find(s => s.title === foundSection);
           errors.push({
             head: unexpectedSection.title,
-            index: unexpectedSection.index,
+            startIndex: unexpectedSection.startIndex,
+            endIndex: unexpectedSection.endIndex,
             message: `Unexpected section "${foundSection}"`,
           });
         }
@@ -327,7 +337,7 @@ if (argv.json) {
   // Output results in text format
   if (errors.length > 0) {
     console.log("Structure violations found:");
-    errors.forEach((error) => console.log(`- [${error.head}] (index: ${error.index}): ${error.message}`));
+    errors.forEach((error) => console.log(`- [${error.head}] (start: ${error.startIndex}, end: ${error.endIndex}): ${error.message}`));
     process.exit(1);
   } else {
     console.log("No structure violations found.");
