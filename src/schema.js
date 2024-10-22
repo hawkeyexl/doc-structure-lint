@@ -3,8 +3,20 @@ export const schema = {
   additionalProperties: false,
   patternProperties: {
     "^[A-Za-z-_]+$": {
-      $ref: "#/definitions/section",
-    }
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        sections: {
+          type: "object",
+          additionalProperties: false,
+          patternProperties: {
+            "^[A-Za-z-_]+$": {
+              $ref: "#/definitions/section",
+            },
+          },
+        },
+      },
+    },
   },
   definitions: {
     section: {
@@ -70,9 +82,7 @@ export const schema = {
           type: "object",
           patternProperties: {
             "^[A-Za-z-_]+": {
-              anyOf: [
-                { $ref: "#/definitions/section" },
-              ],
+              anyOf: [{ $ref: "#/definitions/section" }],
             },
           },
         },
