@@ -15,7 +15,7 @@ templates:                            # Array of templates, each with a unique k
           max: 1                          # Allow a maximum of 1 code block
         sections:                         # Array of sections, each with a unique key
           Prerequisites:                  # Each section corresponds to a heading level one below the parent, in this case Prerequisites is an H2
-            title: 
+            heading: 
               const: Prerequisites          # Require the section to be titled "Prerequisites"
             paragraphs:
               max: 3
@@ -30,7 +30,7 @@ templates:                            # Array of templates, each with a unique k
             additionalSections: true     # Allow additional use case sections
             sections:
               Troubleshooting:
-                title: 
+                heading: 
                   const: Troubleshooting    # Require the section to be titled "Troubleshooting"
                 paragraphs:
                   max: 5
@@ -40,7 +40,7 @@ templates:                            # Array of templates, each with a unique k
 components:
   sections:
     Next steps:
-      title: 
+      heading: 
         const: Next steps             # Back to an H2 level section
       required: false               # Allow the section to be omitted
       paragraphs:

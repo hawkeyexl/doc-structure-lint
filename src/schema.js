@@ -28,15 +28,27 @@ export const schema = {
           description: "Description of the section",
           type: "string",
         },
-        title: {
-          description: "Exact title of the section",
+        heading: {
+          description: "Heading rules",
           type: "object",
-          properties: {
-            const: {
-              description: "Exact title of the section",
-              type: "string",
+          anyOf: [
+            {
+              properties: {
+                const: {
+                  description: "Exact heading of the section",
+                  type: "string",
+                },
+              },
             },
-          },
+            {
+              properties: {
+                pattern: {
+                  description: "Regex pattern for the heading",
+                  type: "string",
+                },
+              },
+            },
+          ],
         },
         required: {
           description: "Whether the section is required",
@@ -54,6 +66,14 @@ export const schema = {
             max: {
               description: "Maximum number of paragraphs",
               type: "integer",
+            },
+            patterns: {
+              description:
+                "Array of regex patterns for paragraphs, applied in sequence to paragraphs as they appear",
+              type: "array",
+              items: {
+                type: "string",
+              },
             },
           },
         },
