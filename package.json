@@ -16,14 +16,15 @@
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "ajv": "^8.17.1",
+    "asciidoctor": "^3.0.4",
     "markdown-it": "^14.1.0",
+    "markdown-it-front-matter": "^0.2.4",
     "yaml": "^2.6.0",
-    "yargs": "^17.7.2",
-    "asciidoctor": "^3.0.4"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "sinon": "^19.0.2",
     "chai": "^5.1.1",
-    "mocha": "^10.7.3"
+    "mocha": "^10.7.3",
+    "sinon": "^19.0.2"
   }
 }

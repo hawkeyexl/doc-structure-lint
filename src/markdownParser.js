@@ -1,6 +1,9 @@
 import MarkdownIt from "markdown-it";
+import markdownItFrontMatter from "markdown-it-front-matter";
 
-const md = new MarkdownIt();
+const md = new MarkdownIt().use(markdownItFrontMatter, function (fm) {
+
+});
 
 export function parseMarkdown(content) {
   const tokens = md.parse(content, {});
@@ -9,75 +12,101 @@ export function parseMarkdown(content) {
   let sectionStack = [];
   let charIndex = 0;
 
+  const result = {
+    frontmatter: [],
+    sections: [],
+  };
+
   for (const token of tokens) {
-    if (token.type === "heading_open") {
+    charIndex += token.content.length;
+
+    if (token.type === "front_matter") {
+      let items = token.meta.trim().split("\n");
+      items = items.map((item) => {
+        const parts = item.split(":");
+        return {
+          key: parts[0].trim(),
+          value: parts.slice(1).join(":").trim(),
+        };
+      });
+      result.frontmatter = items;
+    }
+    else if (token.type === "heading_open") {
       const level = parseInt(token.tag.slice(1));
-      
+
       if (level === 1 && !rootSection) {
         rootSection = {
-          title: "",
-          level: 1,
-          paragraphs: 0,
-          code_blocks: 0,
-          subsections: [],
           startIndex: charIndex,
           endIndex: content.length,
+          heading: {
+            startIndex: charIndex,
+            endIndex: null,
+            content: "",
+          },
+          paragraphs: [],
+          sections: [],
         };
         currentSection = rootSection;
         sectionStack = [rootSection];
+        result.sections.push(rootSection);
       } else {
-        while (sectionStack.length > 1 && sectionStack[sectionStack.length - 1].level >= level) {
+        while (
+          sectionStack.length > 1 &&
+          sectionStack[sectionStack.length - 1].level >= level
+        ) {
           sectionStack.pop();
         }
 
         const newSection = {
-          title: "",
-          level: level,
-          paragraphs: 0,
-          code_blocks: 0,
-          subsections: [],
           startIndex: charIndex,
           endIndex: null,
+          heading: {
+            startIndex: charIndex,
+            endIndex: null,
+            content: "",
+          },
+          paragraphs: [],
+          sections: [],
         };
 
-        sectionStack[sectionStack.length - 1].subsections.push(newSection);
+        sectionStack[sectionStack.length - 1].sections.push(newSection);
         sectionStack.push(newSection);
         currentSection = newSection;
       }
-    } else if (token.type === "inline" && currentSection && !currentSection.title) {
-      currentSection.title = token.content;
+    } else if (
+      token.type === "inline" &&
+      currentSection &&
+      !currentSection.heading.content
+    ) {
+      currentSection.heading.content = token.content;
+      currentSection.heading.endIndex = charIndex;
     } else if (token.type === "paragraph_open") {
-      currentSection.paragraphs++;
+      const paragraph = {
+        startIndex: charIndex,
+        endIndex: null,
+        content: "",
+      };
+      currentSection.paragraphs.push(paragraph);
+    } else if (
+      token.type === "inline" &&
+      currentSection.paragraphs.length > 0
+    ) {
+      const paragraph =
+        currentSection.paragraphs[currentSection.paragraphs.length - 1];
+      paragraph.content += token.content;
+      paragraph.endIndex = charIndex;
     } else if (token.type === "fence") {
-      currentSection.code_blocks++;
-    }
-
-    charIndex += token.content ? token.content.length : 0;
-  }
-
-  if (!rootSection) {
-    rootSection = {
-      title: "Untitled Document",
-      level: 0,
-      paragraphs: 0,
-      code_blocks: 0,
-      subsections: [],
-      startIndex: 0,
-      endIndex: content.length,
-    };
-  }
-
-  // Set endIndex for all sections
-  const setEndIndex = (section, endIndex) => {
-    section.endIndex = endIndex;
-    if (section.subsections.length > 0) {
-      for (let i = 0; i < section.subsections.length; i++) {
-        const nextIndex = i < section.subsections.length - 1 ? section.subsections[i + 1].startIndex : endIndex;
-        setEndIndex(section.subsections[i], nextIndex);
+      const codeBlock = {
+        startIndex: charIndex,
+        endIndex: charIndex + token.content.length,
+        content: `\`\`\`${token.info}\n${token.content}\`\`\``,
+      };
+      if (!currentSection.codeBlocks) {
+        currentSection.codeBlocks = [];
       }
+      currentSection.codeBlocks.push(codeBlock);
     }
-  };
-  setEndIndex(rootSection, content.length);
+  }
 
-  return rootSection;
+  return result;
 }
