@@ -1,7 +1,7 @@
 {
   "frontmatter": {
     "title": "Sample",
-    "description": "This is a sample file"
+    "description": "A sample file for testing purposes."
   },
   "sections": [
     {
@@ -19,30 +19,135 @@
           "content": "This guide will walk you through the process of using our amazing product effectively."
         },
         {
-          "startIndex": 36,
-          "endIndex": 153,
+          "startIndex": 154,
+          "endIndex": 179,
           "content": "Follow along and be amazed!"
         }
       ],
       "sections": [
         {
-          "startIndex": 0,
-          "endIndex": 153,
+          "startIndex": 180,
+          "endIndex": 250,
           "heading": {
-            "startIndex": 0,
-            "endIndex": 32,
+            "startIndex": 180,
+            "endIndex": 193,
             "content": "Prerequisites"
           },
           "paragraphs": [
             {
-              "startIndex": 36,
-              "endIndex": 153,
+              "startIndex": 194,
+              "endIndex": 236,
               "content": "Before you begin, make sure you have the following:"
             },
             {
-              "startIndex": 36,
-              "endIndex": 153,
-              "content": "Before you begin, make sure you have the following:\n\n- A valid license key\n- At least 4GB of RAM\n- Internet connection"
+              "startIndex": 237,
+              "endIndex": 300,
+              "content": "- A valid license key\n- At least 4GB of RAM\n- Internet connection"
+            }
+          ]
+        },
+        {
+          "startIndex": 301,
+          "endIndex": 450,
+          "heading": {
+            "startIndex": 301,
+            "endIndex": 306,
+            "content": "Setup"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 307,
+              "endIndex": 450,
+              "content": "Follow these steps to set up our amazing product:\n\n1. Download the installer from our website.\n2. Run the installer and follow the on-screen instructions.\n3. Enter your license key when prompted.\n4. Restart your computer to complete the installation."
+            }
+          ]
+        },
+        {
+          "startIndex": 451,
+          "endIndex": 600,
+          "heading": {
+            "startIndex": 451,
+            "endIndex": 456,
+            "content": "Usage"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 457,
+              "endIndex": 600,
+              "content": "Here's how to use our amazing product:"
+            }
+          ],
+          "sections": [
+            {
+              "startIndex": 601,
+              "endIndex": 700,
+              "heading": {
+                "startIndex": 601,
+                "endIndex": 612,
+                "content": "Basic Usage"
+              },
+              "paragraphs": [
+                {
+                  "startIndex": 613,
+                  "endIndex": 700,
+                  "content": "To start using the product, follow these steps:\n\n1. Open the application.\n2. Click on the \"New Project\" button.\n3. Choose a template from the list."
+                }
+              ],
+              "codeBlocks": [
+                {
+                  "startIndex": 701,
+                  "endIndex": 750,
+                  "content": "```python\nimport amazing_product\n\nproject = amazing_product.create_project(\"My First Project\")\nproject.run()\n```"
+                }
+              ]
+            },
+            {
+              "startIndex": 751,
+              "endIndex": 850,
+              "heading": {
+                "startIndex": 751,
+                "endIndex": 768,
+                "content": "Advanced Features"
+              },
+              "paragraphs": [
+                {
+                  "startIndex": 769,
+                  "endIndex": 850,
+                  "content": "For advanced users, we offer additional features:\n\n1. Custom scripting\n2. API integration\n3. Automated workflows"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "startIndex": 851,
+          "endIndex": 950,
+          "heading": {
+            "startIndex": 851,
+            "endIndex": 865,
+            "content": "Troubleshooting"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 866,
+              "endIndex": 950,
+              "content": "If you encounter any issues, try these steps:\n\n1. Restart the application.\n2. Check your internet connection.\n3. Verify your license key."
+            }
+          ]
+        },
+        {
+          "startIndex": 951,
+          "endIndex": 1050,
+          "heading": {
+            "startIndex": 951,
+            "endIndex": 961,
+            "content": "Next steps"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 962,
+              "endIndex": 1050,
+              "content": "To get the most out of our amazing product, consider:\n\n- Joining our community forums\n- Attending our weekly webinars\n- Exploring our extensive documentation"
             }
           ]
         }
