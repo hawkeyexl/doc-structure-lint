@@ -1,0 +1,52 @@
+{
+  "frontmatter": {
+    "title": "Sample",
+    "description": "This is a sample file"
+  },
+  "sections": [
+    {
+      "startIndex": 0,
+      "endIndex": 153,
+      "heading": {
+        "startIndex": 0,
+        "endIndex": 32,
+        "content": "How to Use Our Amazing Product"
+      },
+      "paragraphs": [
+        {
+          "startIndex": 36,
+          "endIndex": 153,
+          "content": "This guide will walk you through the process of using our amazing product effectively."
+        },
+        {
+          "startIndex": 36,
+          "endIndex": 153,
+          "content": "Follow along and be amazed!"
+        }
+      ],
+      "sections": [
+        {
+          "startIndex": 0,
+          "endIndex": 153,
+          "heading": {
+            "startIndex": 0,
+            "endIndex": 32,
+            "content": "Prerequisites"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 36,
+              "endIndex": 153,
+              "content": "Before you begin, make sure you have the following:"
+            },
+            {
+              "startIndex": 36,
+              "endIndex": 153,
+              "content": "Before you begin, make sure you have the following:\n\n- A valid license key\n- At least 4GB of RAM\n- Internet connection"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

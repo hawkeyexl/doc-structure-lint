@@ -1,3 +1,8 @@
+---
+title: Sample
+description: A sample file for testing purposes.
+---
+
 # How to Use Our Amazing Product
 
 This guide will walk you through the process of using our amazing product effectively.
