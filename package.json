@@ -1,14 +1,14 @@
 {
-  "name": "markdown-structure-lint",
-  "version": "1.0.0",
-  "description": "A tool to validate markdown structure against a specified template",
+  "name": "doc-structure-lint",
+  "version": "0.0.1",
+  "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
     "markdown-structure-lint": "index.js"
   },
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "mocha src/**/*.test.js"
+    "test": "mocha 'src/**/*.test.js' 'test/**/*.test.js'"
   },
   "author": "Manny Silva",
   "license": "MIT",
@@ -18,7 +18,8 @@
     "ajv": "^8.17.1",
     "markdown-it": "^14.1.0",
     "yaml": "^2.6.0",
-    "yargs": "^17.7.2"
+    "yargs": "^17.7.2",
+    "asciidoctor": "^3.0.4"
   },
   "devDependencies": {
     "sinon": "^19.0.2",

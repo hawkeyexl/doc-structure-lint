@@ -1,10 +1,11 @@
-# Markdown Structure Linter
+# Markdown and AsciiDoc Structure Linter
 
-Markdown Structure Linter is a tool designed to validate the structure of markdown files against predefined templates. It ensures that your markdown documents adhere to specific structural requirements, making it ideal for maintaining consistency in documentation across projects.
+Markdown and AsciiDoc Structure Linter is a tool designed to validate the structure of Markdown and AsciiDoc files against predefined templates. It ensures that your documents adhere to specific structural requirements, making it ideal for maintaining consistency in documentation across projects.
 
 ## Features
 
-- Validate markdown files against custom templates
+- Validate Markdown and AsciiDoc files against custom templates
+- Automatically detect file type based on extension or content
 - Check for required sections, paragraph counts, and code block requirements
 - Flexible template definitions using YAML
 - Output results in both human-readable text and structured JSON formats
@@ -25,26 +26,31 @@ Markdown Structure Linter is a tool designed to validate the structure of markdo
 
 ## Usage
 
-To use the Markdown Structure Linter, you need a markdown file to lint and a template to lint against. The basic command structure is:
+To use the Markdown and AsciiDoc Structure Linter, you need a Markdown or AsciiDoc file to lint and a template to lint against. The basic command structure is:
 
 ```
-node index.js --file <path-to-markdown> --template <template-name>
+node index.js --file <path-to-file> --template <template-name>
 ```
 
 ### Options
 
-- `--file` or `-f`: Path to the markdown file to lint (required)
+- `--file` or `-f`: Path to the Markdown or AsciiDoc file to lint (required)
 - `--template` or `-t`: Name of the template to use (required)
 - `--json`: Output results in JSON format (optional)
 
 ### Examples
 
-1. Lint a markdown file using the "How-to" template:
+1. Lint a Markdown file using the "How-to" template:
    ```
    node index.js --file ./docs/how-to-guide.md --template How-to
    ```
 
-2. Lint a markdown file and output results in JSON format:
+2. Lint an AsciiDoc file using the "How-to" template:
+   ```
+   node index.js --file ./docs/how-to-guide.adoc --template How-to
+   ```
+
+3. Lint a file and output results in JSON format:
    ```
    node index.js --file ./docs/api-reference.md --template API-doc --json
    ```
@@ -59,6 +65,7 @@ markdown-structure-linter/
 │   ├── schema.js
 │   ├── templateLoader.js
 │   ├── markdownParser.js
+│   ├── asciidocParser.js
 │   └── structureValidator.js
 ├── index.js
 ├── templates.yaml
@@ -68,14 +75,15 @@ markdown-structure-linter/
 
 - `src/schema.js`: Defines the JSON schema for template validation
 - `src/templateLoader.js`: Handles loading and validating templates
-- `src/markdownParser.js`: Parses markdown content into a structured format
-- `src/structureValidator.js`: Validates the parsed markdown structure against the template
+- `src/markdownParser.js`: Parses Markdown content into a structured format
+- `src/asciidocParser.js`: Parses AsciiDoc content into a structured format
+- `src/structureValidator.js`: Validates the parsed document structure against the template
 - `index.js`: Main entry point that ties everything together
 - `templates.yaml`: Contains the template definitions
 
 ## Templates
 
-Templates are defined in the `templates.yaml` file. Each template specifies the expected structure of a markdown document, including:
+Templates are defined in the `templates.yaml` file. Each template specifies the expected structure of a document, including:
 
 - Required sections
 - Paragraph count limits
@@ -124,7 +132,7 @@ The `startIndex` and `endIndex` properties provide the character positions of th
 
 ## Contributing
 
-Contributions to the Markdown Structure Linter are welcome! Please feel free to submit a Pull Request.
+Contributions to the Markdown and AsciiDoc Structure Linter are welcome! Please feel free to submit a Pull Request.
 
 ## License
 

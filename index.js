@@ -1,9 +1,28 @@
 import { readFileSync } from "fs";
+import path from "path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import { loadAndValidateTemplates } from "./src/templateLoader.js";
 import { parseMarkdown } from "./src/markdownParser.js";
+import { parseAsciiDoc } from "./src/asciidocParser.js";
 import { validateStructure } from "./src/structureValidator.js";
+
+const inferFileType = (filePath, content) => {
+  const extension = path.extname(filePath).toLowerCase();
+  if (['.md', '.markdown'].includes(extension)) {
+    return 'markdown';
+  } else if (['.adoc', '.asciidoc'].includes(extension)) {
+    return 'asciidoc';
+  }
+
+  // If extension is not conclusive, check content
+  if (content.trim().startsWith('= ')) {
+    return 'asciidoc';
+  }
+  
+  // Default to markdown if unable to determine
+  return 'markdown';
+};
 
 async function main() {
   const templates = await loadAndValidateTemplates();
@@ -12,7 +31,7 @@ async function main() {
   const argv = yargs(hideBin(process.argv))
     .option("file", {
       alias: "f",
-      description: "Path to the markdown file to lint",
+      description: "Path to the file to lint",
       type: "string",
       demandOption: true,
     })
@@ -30,9 +49,19 @@ async function main() {
     .help()
     .alias("help", "h").argv;
 
-  // Read and lint the markdown file
-  const markdownContent = readFileSync(argv.file, "utf8");
-  const structure = parseMarkdown(markdownContent);
+  // Read and lint the file
+  const fileContent = readFileSync(argv.file, "utf8");
+  const fileType = inferFileType(argv.file, fileContent);
+  
+  let structure;
+  if (fileType === "markdown") {
+    structure = parseMarkdown(fileContent);
+  } else if (fileType === "asciidoc") {
+    structure = parseAsciiDoc(fileContent);
+  } else {
+    throw new Error(`Unsupported file type: ${fileType}`);
+  }
+  
   const template = templates[argv.template];
   
   if (!template) {

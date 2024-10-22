@@ -1,0 +1,32 @@
+= How-to Guide
+
+This is an introductory paragraph.
+
+Here's another paragraph to meet the minimum requirement.
+
+== Prerequisites
+
+Here's a prerequisite.
+
+== Setup
+
+Here's how to set up.
+
+== Usage
+
+Here's how to use it.
+
+[source,javascript]
+----
+console.log("Hello, World!");
+----
+
+=== Troubleshooting
+
+Here's how to troubleshoot.
+
+== Next steps
+
+Here's what to do next.
+
+And another paragraph to meet the minimum requirement.
