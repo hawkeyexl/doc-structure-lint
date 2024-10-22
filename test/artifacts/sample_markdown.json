@@ -1,155 +1,316 @@
 {
-  "frontmatter": {
-    "title": "Sample",
-    "description": "A sample file for testing purposes."
-  },
+  "frontmatter": [
+    {
+      "key": "title",
+      "value": "Sample"
+    },
+    {
+      "key": "description",
+      "value": "A sample file for testing purposes."
+    }
+  ],
   "sections": [
     {
+      "id": "f3036c90-2d11-44f8-bae3-43b3fb45ddac",
       "startIndex": 0,
-      "endIndex": 153,
+      "endIndex": "null",
       "heading": {
+        "level": 1,
         "startIndex": 0,
-        "endIndex": 32,
-        "content": "How to Use Our Amazing Product"
+        "endIndex": 30,
+        "content": "How to Use Our Amazing Product",
+        "markup": "#"
       },
       "paragraphs": [
         {
-          "startIndex": 36,
-          "endIndex": 153,
-          "content": "This guide will walk you through the process of using our amazing product effectively."
+          "startIndex": 30,
+          "endIndex": 116,
+          "content": "This guide will walk you through the process of using our amazing product effectively.",
+          "markup": ""
         },
         {
-          "startIndex": 154,
-          "endIndex": 179,
-          "content": "Follow along and be amazed!"
+          "startIndex": 116,
+          "endIndex": 143,
+          "content": "Follow along and be amazed!",
+          "markup": ""
         }
       ],
+      "codeBlocks": [],
       "sections": [
         {
-          "startIndex": 180,
-          "endIndex": 250,
+          "id": "baa47bd2-e321-402c-9976-79fc97b03367",
+          "startIndex": 143,
+          "endIndex": "null",
           "heading": {
-            "startIndex": 180,
-            "endIndex": 193,
-            "content": "Prerequisites"
+            "level": 2,
+            "startIndex": 143,
+            "endIndex": 156,
+            "content": "Prerequisites",
+            "markup": "##"
           },
           "paragraphs": [
             {
-              "startIndex": 194,
-              "endIndex": 236,
-              "content": "Before you begin, make sure you have the following:"
+              "startIndex": 156,
+              "endIndex": 207,
+              "content": "Before you begin, make sure you have the following:",
+              "markup": ""
             },
             {
-              "startIndex": 237,
-              "endIndex": 300,
-              "content": "- A valid license key\n- At least 4GB of RAM\n- Internet connection"
-            }
-          ]
-        },
-        {
-          "startIndex": 301,
-          "endIndex": 450,
-          "heading": {
-            "startIndex": 301,
-            "endIndex": 306,
-            "content": "Setup"
-          },
-          "paragraphs": [
+              "startIndex": 207,
+              "endIndex": 226,
+              "content": "A valid license key",
+              "markup": ""
+            },
             {
-              "startIndex": 307,
-              "endIndex": 450,
-              "content": "Follow these steps to set up our amazing product:\n\n1. Download the installer from our website.\n2. Run the installer and follow the on-screen instructions.\n3. Enter your license key when prompted.\n4. Restart your computer to complete the installation."
-            }
-          ]
-        },
-        {
-          "startIndex": 451,
-          "endIndex": 600,
-          "heading": {
-            "startIndex": 451,
-            "endIndex": 456,
-            "content": "Usage"
-          },
-          "paragraphs": [
+              "startIndex": 226,
+              "endIndex": 245,
+              "content": "At least 4GB of RAM",
+              "markup": ""
+            },
             {
-              "startIndex": 457,
-              "endIndex": 600,
-              "content": "Here's how to use our amazing product:"
+              "startIndex": 245,
+              "endIndex": 264,
+              "content": "Internet connection",
+              "markup": ""
             }
           ],
+          "codeBlocks": [],
+          "sections": []
+        },
+        {
+          "id": "7e41c017-99ce-4687-affa-70f10ed514b4",
+          "startIndex": 264,
+          "endIndex": "null",
+          "heading": {
+            "level": 2,
+            "startIndex": 264,
+            "endIndex": 269,
+            "content": "Setup",
+            "markup": "##"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 269,
+              "endIndex": 318,
+              "content": "Follow these steps to set up our amazing product:",
+              "markup": ""
+            },
+            {
+              "startIndex": 318,
+              "endIndex": 358,
+              "content": "Download the installer from our website.",
+              "markup": ""
+            },
+            {
+              "startIndex": 358,
+              "endIndex": 414,
+              "content": "Run the installer and follow the on-screen instructions.",
+              "markup": ""
+            },
+            {
+              "startIndex": 414,
+              "endIndex": 451,
+              "content": "Enter your license key when prompted.",
+              "markup": ""
+            },
+            {
+              "startIndex": 451,
+              "endIndex": 502,
+              "content": "Restart your computer to complete the installation.",
+              "markup": ""
+            }
+          ],
+          "codeBlocks": [],
+          "sections": []
+        },
+        {
+          "id": "18a27069-c8d8-4af6-96e8-c98811db9029",
+          "startIndex": 502,
+          "endIndex": "null",
+          "heading": {
+            "level": 2,
+            "startIndex": 502,
+            "endIndex": 507,
+            "content": "Usage",
+            "markup": "##"
+          },
+          "paragraphs": [
+            {
+              "startIndex": 507,
+              "endIndex": 545,
+              "content": "Here's how to use our amazing product:",
+              "markup": ""
+            }
+          ],
+          "codeBlocks": [],
           "sections": [
             {
-              "startIndex": 601,
-              "endIndex": 700,
+              "id": "f70737db-3db0-4941-aa52-217c498bcf59",
+              "startIndex": 545,
+              "endIndex": "null",
               "heading": {
-                "startIndex": 601,
-                "endIndex": 612,
-                "content": "Basic Usage"
+                "level": 3,
+                "startIndex": 545,
+                "endIndex": 556,
+                "content": "Basic Usage",
+                "markup": "###"
               },
               "paragraphs": [
                 {
-                  "startIndex": 613,
-                  "endIndex": 700,
-                  "content": "To start using the product, follow these steps:\n\n1. Open the application.\n2. Click on the \"New Project\" button.\n3. Choose a template from the list."
+                  "startIndex": 556,
+                  "endIndex": 603,
+                  "content": "To start using the product, follow these steps:",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 603,
+                  "endIndex": 624,
+                  "content": "Open the application.",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 624,
+                  "endIndex": 658,
+                  "content": "Click on the \"New Project\" button.",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 658,
+                  "endIndex": 690,
+                  "content": "Choose a template from the list.",
+                  "markup": ""
                 }
               ],
               "codeBlocks": [
                 {
-                  "startIndex": 701,
-                  "endIndex": 750,
+                  "startIndex": 789,
+                  "endIndex": 888,
                   "content": "```python\nimport amazing_product\n\nproject = amazing_product.create_project(\"My First Project\")\nproject.run()\n```"
                 }
-              ]
+              ],
+              "sections": []
             },
             {
-              "startIndex": 751,
-              "endIndex": 850,
+              "id": "dbc54803-1be8-4848-826a-753d9ae3dcd7",
+              "startIndex": 789,
+              "endIndex": "null",
               "heading": {
-                "startIndex": 751,
-                "endIndex": 768,
-                "content": "Advanced Features"
+                "level": 3,
+                "startIndex": 789,
+                "endIndex": 806,
+                "content": "Advanced Features",
+                "markup": "###"
               },
               "paragraphs": [
                 {
-                  "startIndex": 769,
-                  "endIndex": 850,
-                  "content": "For advanced users, we offer additional features:\n\n1. Custom scripting\n2. API integration\n3. Automated workflows"
+                  "startIndex": 806,
+                  "endIndex": 855,
+                  "content": "For advanced users, we offer additional features:",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 855,
+                  "endIndex": 871,
+                  "content": "Custom scripting",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 871,
+                  "endIndex": 886,
+                  "content": "API integration",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 886,
+                  "endIndex": 905,
+                  "content": "Automated workflows",
+                  "markup": ""
                 }
-              ]
+              ],
+              "codeBlocks": [],
+              "sections": []
+            },
+            {
+              "id": "ec0b936e-129d-4e42-ae5f-904b584785ce",
+              "startIndex": 905,
+              "endIndex": "null",
+              "heading": {
+                "level": 3,
+                "startIndex": 905,
+                "endIndex": 920,
+                "content": "Troubleshooting",
+                "markup": "###"
+              },
+              "paragraphs": [
+                {
+                  "startIndex": 920,
+                  "endIndex": 965,
+                  "content": "If you encounter any issues, try these steps:",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 965,
+                  "endIndex": 989,
+                  "content": "Restart the application.",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 989,
+                  "endIndex": 1020,
+                  "content": "Check your internet connection.",
+                  "markup": ""
+                },
+                {
+                  "startIndex": 1020,
+                  "endIndex": 1044,
+                  "content": "Verify your license key.",
+                  "markup": ""
+                }
+              ],
+              "codeBlocks": [],
+              "sections": []
             }
           ]
         },
         {
-          "startIndex": 851,
-          "endIndex": 950,
+          "id": "3d2afbe8-4a3c-439d-ae2d-c3ec29805617",
+          "startIndex": 1044,
+          "endIndex": "null",
           "heading": {
-            "startIndex": 851,
-            "endIndex": 865,
-            "content": "Troubleshooting"
+            "level": 2,
+            "startIndex": 1044,
+            "endIndex": 1054,
+            "content": "Next steps",
+            "markup": "##"
           },
           "paragraphs": [
             {
-              "startIndex": 866,
-              "endIndex": 950,
-              "content": "If you encounter any issues, try these steps:\n\n1. Restart the application.\n2. Check your internet connection.\n3. Verify your license key."
-            }
-          ]
-        },
-        {
-          "startIndex": 951,
-          "endIndex": 1050,
-          "heading": {
-            "startIndex": 951,
-            "endIndex": 961,
-            "content": "Next steps"
-          },
-          "paragraphs": [
+              "startIndex": 1054,
+              "endIndex": 1107,
+              "content": "To get the most out of our amazing product, consider:",
+              "markup": ""
+            },
             {
-              "startIndex": 962,
-              "endIndex": 1050,
-              "content": "To get the most out of our amazing product, consider:\n\n- Joining our community forums\n- Attending our weekly webinars\n- Exploring our extensive documentation"
+              "startIndex": 1107,
+              "endIndex": 1135,
+              "content": "Joining our community forums",
+              "markup": ""
+            },
+            {
+              "startIndex": 1135,
+              "endIndex": 1164,
+              "content": "Attending our weekly webinars",
+              "markup": ""
+            },
+            {
+              "startIndex": 1164,
+              "endIndex": 1201,
+              "content": "Exploring our extensive documentation",
+              "markup": ""
             }
-          ]
+          ],
+          "codeBlocks": [],
+          "sections": []
         }
       ]
     }
