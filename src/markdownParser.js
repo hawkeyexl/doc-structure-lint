@@ -1,15 +1,12 @@
 import MarkdownIt from "markdown-it";
 import markdownItFrontMatter from "markdown-it-front-matter";
+import { v4 as uuid } from "uuid";
 
-const md = new MarkdownIt().use(markdownItFrontMatter, function (fm) {
-
-});
+const md = new MarkdownIt().use(markdownItFrontMatter, function (fm) {});
 
 export function parseMarkdown(content) {
   const tokens = md.parse(content, {});
-  let rootSection = null;
   let currentSection = null;
-  let sectionStack = [];
   let charIndex = 0;
 
   const result = {
@@ -30,49 +27,39 @@ export function parseMarkdown(content) {
         };
       });
       result.frontmatter = items;
-    }
-    else if (token.type === "heading_open") {
+    } else if (token.type === "heading_open") {
       const level = parseInt(token.tag.slice(1));
 
-      if (level === 1 && !rootSection) {
-        rootSection = {
-          startIndex: charIndex,
-          endIndex: content.length,
-          heading: {
-            startIndex: charIndex,
-            endIndex: null,
-            content: "",
-          },
-          paragraphs: [],
-          sections: [],
-        };
-        currentSection = rootSection;
-        sectionStack = [rootSection];
-        result.sections.push(rootSection);
-      } else {
-        while (
-          sectionStack.length > 1 &&
-          sectionStack[sectionStack.length - 1].level >= level
-        ) {
-          sectionStack.pop();
-        }
-
-        const newSection = {
+      const newSection = {
+        id: `${uuid()}`,
+        startIndex: charIndex,
+        endIndex: `null`,
+        heading: {
+          level,
           startIndex: charIndex,
           endIndex: null,
-          heading: {
-            startIndex: charIndex,
-            endIndex: null,
-            content: "",
-          },
-          paragraphs: [],
-          sections: [],
-        };
+          content: "",
+          markup: token.markup,
+        },
+        paragraphs: [],
+        codeBlocks: [],
+        sections: [],
+      };
 
-        sectionStack[sectionStack.length - 1].sections.push(newSection);
-        sectionStack.push(newSection);
-        currentSection = newSection;
+      if (level === 1) {
+        result.sections.push(newSection);
+      } else if (level > currentSection.heading.level) {
+        currentSection.sections.push(newSection);
+      } else if (level <= currentSection.heading.level) {
+        let parent = findParent(result, currentSection.id);
+        while (level <= parent.heading.level) {
+          parent = findParent(result, parent.id);
+        }
+        parent.sections.push(newSection);
       }
+
+
+      currentSection = newSection;
     } else if (
       token.type === "inline" &&
       currentSection &&
@@ -85,6 +72,7 @@ export function parseMarkdown(content) {
         startIndex: charIndex,
         endIndex: null,
         content: "",
+        markup: "",
       };
       currentSection.paragraphs.push(paragraph);
     } else if (
@@ -109,4 +97,24 @@ export function parseMarkdown(content) {
   }
 
   return result;
+}
+
+// Function to find immediate parent of an object with given ID
+function findParent(obj, targetId, parent = null) {
+  // If current object has the target ID, return its parent
+  if (obj.id === targetId) {
+      return parent;
+  }
+  
+  // If object has sections, search through them
+  if (obj.sections && Array.isArray(obj.sections)) {
+      for (const section of obj.sections) {
+          const result = findParent(section, targetId, obj);
+          if (result !== null) {
+              return result;
+          }
+      }
+  }
+  
+  return null;
 }
