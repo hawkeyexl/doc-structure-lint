@@ -39,7 +39,6 @@ export function parseMarkdown(content) {
           startIndex: charIndex,
           endIndex: null,
           content: "",
-          markup: token.markup,
         },
         paragraphs: [],
         codeBlocks: [],
@@ -72,7 +71,6 @@ export function parseMarkdown(content) {
         startIndex: charIndex,
         endIndex: null,
         content: "",
-        markup: "",
       };
       currentSection.paragraphs.push(paragraph);
     } else if (

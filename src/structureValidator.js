@@ -1,8 +1,12 @@
-export function validateStructure(section, template, path = []) {
+// Evaluate an document object (or sub-object) against a template
+export function validateStructure(structure, template, path = []) {
   const errors = [];
 
-  // Check title
-  if (template.title && template.title.const && section.title !== template.title.const) {
+  console.warn("TODO: Re-implement validateStructure");
+  return errors;
+
+  // Check heading
+  if (template.heading && template.heading.const && section.heading !== template.heading.const) {
     errors.push({
       head: section.title,
       startIndex: section.startIndex,
@@ -65,38 +69,38 @@ export function validateStructure(section, template, path = []) {
 
   // Check subsections
   if (template.sections) {
-    const expectedSections = new Set(Object.keys(template.sections));
-    const foundSections = new Set(section.subsections.map((s) => s.title));
+  //   const expectedSections = new Set(Object.keys(template.sections));
+  //   const foundSections = new Set(section.subsections.map((s) => s.title));
 
-    for (const expectedSection of expectedSections) {
-      if (
-        !foundSections.has(expectedSection) &&
-        template.sections[expectedSection].required !== false
-      ) {
-        errors.push({
-          head: section.title,
-          startIndex: section.startIndex,
-          endIndex: section.endIndex,
-          message: `Missing required section "${expectedSection}"`,
-        });
-      }
-    }
+  //   for (const expectedSection of expectedSections) {
+  //     if (
+  //       !foundSections.has(expectedSection) &&
+  //       template.sections[expectedSection].required !== false
+  //     ) {
+  //       errors.push({
+  //         head: section.title,
+  //         startIndex: section.startIndex,
+  //         endIndex: section.endIndex,
+  //         message: `Missing required section "${expectedSection}"`,
+  //       });
+  //     }
+  //   }
 
-    if (!template.additionalSections) {
-      for (const foundSection of foundSections) {
-        if (!expectedSections.has(foundSection)) {
-          const unexpectedSection = section.subsections.find(s => s.title === foundSection);
-          errors.push({
-            head: unexpectedSection.title,
-            startIndex: unexpectedSection.startIndex,
-            endIndex: unexpectedSection.endIndex,
-            message: `Unexpected section "${foundSection}"`,
-          });
-        }
-      }
-    }
+  //   if (!template.additionalSections) {
+  //     for (const foundSection of foundSections) {
+  //       if (!expectedSections.has(foundSection)) {
+  //         const unexpectedSection = section.subsections.find(s => s.title === foundSection);
+  //         errors.push({
+  //           head: unexpectedSection.title,
+  //           startIndex: unexpectedSection.startIndex,
+  //           endIndex: unexpectedSection.endIndex,
+  //           message: `Unexpected section "${foundSection}"`,
+  //         });
+  //       }
+  //     }
+  //   }
 
-    for (const subsection of section.subsections) {
+    for (const subsection of section.sections) {
       const subsectionTemplate = template.sections[subsection.title];
       if (subsectionTemplate) {
         errors.push(
