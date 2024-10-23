@@ -7,7 +7,7 @@ export function validateHeading(section, template) {
       head: section.title,
       startIndex: section.startIndex,
       endIndex: section.endIndex,
-      message: `Expected title "${template.heading.const}", but found "${section.heading}"`,
+      message: `Expected title "${template.heading.const}", but found "${section.heading.content}"`,
     });
   }
   
@@ -17,7 +17,7 @@ export function validateHeading(section, template) {
       head: section.title,
       startIndex: section.startIndex,
       endIndex: section.endIndex,
-      message: `Title "${section.heading}" doesn't match pattern "${template.heading.pattern}"`,
+      message: `Title "${section.heading.content}" doesn't match pattern "${template.heading.pattern}"`,
     });
   }
 
