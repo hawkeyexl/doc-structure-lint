@@ -81,7 +81,7 @@ function validateSection(structureSection, templateSection) {
       // For each section in the template, identify if it exists in the structure and which structure section it corresponds to
       const sectionMap = {};
       for (let j = 0; j < Object.keys(templateSection.sections).length; j++) {
-        const templateKey = templateKey;
+        const templateKey = Object.keys(templateSection.sections)[j];
         const templateSubsection = templateSection.sections[templateKey];
         for (let k = 0; k < structureSection.sections.length; k++) {
           const structureSubsection = structureSection.sections[k];

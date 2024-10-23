@@ -15,7 +15,6 @@ Before you begin, make sure you have the following:
 
 - A valid license key
 - At least 4GB of RAM
-- Internet connection
 
 ## Setup
 
@@ -27,10 +26,6 @@ Follow these steps to set up our amazing product:
 4. Restart your computer to complete the installation.
 
 ## Usage
-
-Here's how to use our amazing product:
-
-### Basic Usage
 
 To start using the product, follow these steps:
 

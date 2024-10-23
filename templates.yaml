@@ -24,7 +24,7 @@ templates:                            # Array of templates, each with a unique k
               max: 5                      # Allow a maximum of 5 paragraphs
           Usage:
             paragraphs:
-              max: 3
+              max: 4
             code_blocks:
               min: 1                      # Require at least one code block
             additionalSections: true     # Allow additional use case sections
