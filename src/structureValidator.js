@@ -48,7 +48,7 @@ export function validateStructure(structure, template) {
             Object.keys(templateSection.sections).length ||
           (structureSection.sections.length >
             Object.keys(templateSection.sections).length &&
-            !structureSection.additionalSections)
+            !templateSection.additionalSections)
         ) {
           errors.push({
             type: "section_count_mismatch",
