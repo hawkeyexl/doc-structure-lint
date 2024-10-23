@@ -2,7 +2,7 @@ export function validateHeading(section, template) {
   const errors = [];
 
   // Const
-  if (template.heading.const && section.heading !== template.heading.const) {
+  if (template.heading.const && section.heading.content !== template.heading.const) {
     errors.push({
       head: section.title,
       startIndex: section.startIndex,
@@ -12,7 +12,7 @@ export function validateHeading(section, template) {
   }
   
   // Pattern
-  if (template.heading.pattern && !template.heading.pattern.test(section.heading)) {
+  if (template.heading.pattern && !template.heading.pattern.test(section.heading.content)) {
     errors.push({
       head: section.title,
       startIndex: section.startIndex,
