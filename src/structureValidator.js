@@ -36,8 +36,8 @@ export function validateStructure(structure, template) {
       // Check subsections
       if (templateSection.sections) {
         if (!structureSection.sections) {
-        // Check for missing sections
-        errors.push({
+          // Check for missing sections
+          errors.push({
             type: "missing_section",
             section: templateKey,
             message: `Missing section ${templateKey}`,
@@ -61,19 +61,24 @@ export function validateStructure(structure, template) {
           // Check for additional sections
           structureSection.sections.length >
             Object.keys(templateSection.sections).length &&
-          structureSection.additionalSections
+          templateSection.additionalSections
         ) {
           // For each section in the template, identify if it exists in the structure and which structure section it corresponds to
           const sectionMap = {};
-          for (let j = 0; j < Object.keys(templateSection.sections).length; j++) {
-            const templateSubsection = templateSection.sections[
-              Object.keys(templateSection.sections)[j]
-            ];
+          for (
+            let j = 0;
+            j < Object.keys(templateSection.sections).length;
+            j++
+          ) {
+            const templateSubsection =
+              templateSection.sections[
+                Object.keys(templateSection.sections)[j]
+              ];
             for (let k = 0; k < structureSection.sections.length; k++) {
               const structureSubsection = structureSection.sections[k];
               if (
-                validateHeading(structureSubsection, templateSubsection).length ===
-                0
+                validateHeading(structureSubsection, templateSubsection)
+                  .length === 0
               ) {
                 sectionMap[j] = k;
                 break;
@@ -84,9 +89,9 @@ export function validateStructure(structure, template) {
               errors.push({
                 type: "missing_section",
                 section: templateKey,
-                message: `Missing section ${Object.keys(
-                  templateSection.sections
-                )[j]}`,
+                message: `Missing section ${
+                  Object.keys(templateSection.sections)[j]
+                }`,
               });
             }
           }
