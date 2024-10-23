@@ -6,7 +6,7 @@ import { dereference } from "@apidevtools/json-schema-ref-parser";
 import Ajv from "ajv";
 import { schema } from "./schema.js";
 
-const ajv = new Ajv();
+const ajv = new Ajv({useDefaults: true});
 
 export async function loadAndValidateTemplates() {
   let templateDescriptions = parse(
