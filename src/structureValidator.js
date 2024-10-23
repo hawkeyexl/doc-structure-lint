@@ -81,8 +81,8 @@ function validateSection(structureSection, templateSection) {
       // For each section in the template, identify if it exists in the structure and which structure section it corresponds to
       const sectionMap = {};
       for (let j = 0; j < Object.keys(templateSection.sections).length; j++) {
-        const templateSubsection =
-          templateSection.sections[Object.keys(templateSection.sections)[j]];
+        const templateKey = templateKey;
+        const templateSubsection = templateSection.sections[templateKey];
         for (let k = 0; k < structureSection.sections.length; k++) {
           const structureSubsection = structureSection.sections[k];
           if (
@@ -94,13 +94,11 @@ function validateSection(structureSection, templateSection) {
           }
         }
         // If the section doesn't exist in the structure, add an error
-        if (!sectionMap[j] && !templateSubsection.required) {
+        if (!sectionMap[j] && templateSubsection.required) {
           errors.push({
             type: "missing_section",
             section: templateKey,
-            message: `Missing section ${
-              Object.keys(templateSection.sections)[j]
-            }`,
+            message: `Missing section ${templateKey}`,
           });
         }
       }
