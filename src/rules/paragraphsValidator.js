@@ -8,7 +8,7 @@ export function validateParagraphs(section, template) {
       section.paragraphs.length < template.paragraphs.min
     ) {
       errors.push({
-        head: section.title,
+        head: section.heading.content,
         startIndex: section.startIndex,
         endIndex: section.endIndex,
         message: `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs.length}`,
@@ -21,7 +21,7 @@ export function validateParagraphs(section, template) {
       section.paragraphs.length > template.paragraphs.max
     ) {
       errors.push({
-        head: section.title,
+        head: section.heading.content,
         startIndex: section.startIndex,
         endIndex: section.endIndex,
         message: `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs.length}`,

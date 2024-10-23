@@ -8,7 +8,7 @@ export function validateCodeBlocks(section, template) {
       section.codeBlocks.length < template.code_blocks.min
     ) {
       errors.push({
-        head: section.title,
+        head: section.heading.content,
         startIndex: section.startIndex,
         endIndex: section.endIndex,
         message: `Expected at least ${template.code_blocks.min} code blocks, but found ${section.codeBlocks.length}`,
@@ -21,7 +21,7 @@ export function validateCodeBlocks(section, template) {
       section.codeBlocks.length > template.code_blocks.max
     ) {
       errors.push({
-        head: section.title,
+        head: section.heading.content,
         startIndex: section.startIndex,
         endIndex: section.endIndex,
         message: `Expected at most ${template.code_blocks.max} code blocks, but found ${section.codeBlocks.length}`,
