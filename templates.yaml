@@ -1,6 +1,6 @@
-markdown-structure-lint: 1.0.0
+doc-structure-lint: 0.0.1
 info:
-  title: Manny's Sample Templates
+  title: Sample Templates
   version: 1.0.0
 
 templates:                            # Array of templates, each with a unique key
