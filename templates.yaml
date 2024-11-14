@@ -4,7 +4,36 @@ info:
   version: 1.0.0
 
 templates:                            # Array of templates, each with a unique key
-  How-to:                             # Template definition correspondings to the H1 level of the document
+  How-to:
+    sections:
+      Title:
+        paragraphs:
+          min: 1
+        sections:
+          Overview:
+            heading:
+              const: Overview
+            paragraphs:
+              min: 1
+          Before you start:
+            heading:
+              const: Before you start
+            paragraphs:
+              min: 1
+          Task:
+            paragraphs:
+              min: 1
+            additionalSections: true
+            sections:
+              Sub-task:
+                paragraphs:
+                  min: 1
+          See also:
+            heading:
+              const: See also
+            paragraphs:
+              min: 1
+  Sample:                             # Template definition correspondings to the H1 level of the document
     sections:                         # Array of sections, each with a unique key
       Introduction:                   # Each sections corresponds to a heading level one below the parent, starting with an H1 at the first level
         description: A template for how-to guides that include prerequisites, setup, usage, troubleshooting, and next steps sections.
