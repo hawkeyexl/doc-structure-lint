@@ -1,11 +1,9 @@
-import MarkdownIt from "markdown-it";
-import markdownItFrontMatter from "markdown-it-front-matter";
-import { v4 as uuid } from "uuid";
-
-const md = new MarkdownIt().use(markdownItFrontMatter, function (fm) {});
+import { remark } from 'remark';
+import remarkFrontmatter from 'remark-frontmatter';
+import { v4 as uuid } from 'uuid';
 
 export function parseMarkdown(content) {
-  const tokens = md.parse(content, {});
+  const tree = remark().use(remarkFrontmatter).parse(content);
   let currentSection = null;
   let charIndex = 0;
 
@@ -14,31 +12,27 @@ export function parseMarkdown(content) {
     sections: [],
   };
 
-  for (const token of tokens) {
-    charIndex += token.content.length;
-
-    if (token.type === "front_matter") {
-      let items = token.meta.trim().split("\n");
-      items = items.map((item) => {
-        const parts = item.split(":");
+  const processNode = (node, parentSection) => {
+    if (node.type === 'yaml') {
+      const items = node.value.trim().split('\n').map(item => {
+        const parts = item.split(':');
         return {
           key: parts[0].trim(),
-          value: parts.slice(1).join(":").trim(),
+          value: parts.slice(1).join(':').trim(),
         };
       });
       result.frontmatter = items;
-    } else if (token.type === "heading_open") {
-      const level = parseInt(token.tag.slice(1));
-
+    } else if (node.type === 'heading') {
+      const level = node.depth;
       const newSection = {
         id: `${uuid()}`,
         startIndex: charIndex,
-        endIndex: `null`,
+        endIndex: null,
         heading: {
           level,
           startIndex: charIndex,
           endIndex: null,
-          content: "",
+          content: node.children.map(child => child.value).join(''),
         },
         paragraphs: [],
         codeBlocks: [],
@@ -57,42 +51,29 @@ export function parseMarkdown(content) {
         parent.sections.push(newSection);
       }
 
-
       currentSection = newSection;
-    } else if (
-      token.type === "inline" &&
-      currentSection &&
-      !currentSection.heading.content
-    ) {
-      currentSection.heading.content = token.content;
-      currentSection.heading.endIndex = charIndex;
-    } else if (token.type === "paragraph_open") {
+    } else if (node.type === 'paragraph') {
       const paragraph = {
         startIndex: charIndex,
-        endIndex: null,
-        content: "",
+        endIndex: charIndex + node.children.map(child => child.value).join('').length,
+        content: node.children.map(child => child.value).join(''),
       };
       currentSection.paragraphs.push(paragraph);
-    } else if (
-      token.type === "inline" &&
-      currentSection.paragraphs.length > 0
-    ) {
-      const paragraph =
-        currentSection.paragraphs[currentSection.paragraphs.length - 1];
-      paragraph.content += token.content;
-      paragraph.endIndex = charIndex;
-    } else if (token.type === "fence") {
+    } else if (node.type === 'code') {
       const codeBlock = {
         startIndex: charIndex,
-        endIndex: charIndex + token.content.length,
-        content: `\`\`\`${token.info}\n${token.content}\`\`\``,
+        endIndex: charIndex + node.value.length,
+        content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
       };
-      if (!currentSection.codeBlocks) {
-        currentSection.codeBlocks = [];
-      }
       currentSection.codeBlocks.push(codeBlock);
     }
-  }
+
+    if (node.children) {
+      node.children.forEach(child => processNode(child, currentSection));
+    }
+  };
+
+  processNode(tree, null);
 
   return result;
 }

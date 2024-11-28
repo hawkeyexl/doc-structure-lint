@@ -17,8 +17,7 @@
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "ajv": "^8.17.1",
     "asciidoctor": "^3.0.4",
-    "markdown-it": "^14.1.0",
-    "markdown-it-front-matter": "^0.2.4",
+    "remark": "^15.0.1",
     "uuid": "^10.0.0",
     "yaml": "^2.6.0",
     "yargs": "^17.7.2"
