@@ -9,8 +9,7 @@ export function validateParagraphs(section, template) {
     ) {
       errors.push({
         head: section.heading.content,
-        startIndex: section.startIndex,
-        endIndex: section.endIndex,
+        position: section.position,
         message: `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs.length}`,
       });
     }
@@ -22,8 +21,7 @@ export function validateParagraphs(section, template) {
     ) {
       errors.push({
         head: section.heading.content,
-        startIndex: section.startIndex,
-        endIndex: section.endIndex,
+        position: section.position,
         message: `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs.length}`,
       });
     }
