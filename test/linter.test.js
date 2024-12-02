@@ -46,7 +46,7 @@ describe('Markdown and AsciiDoc Structure Linter', () => {
 `;
     const structure = parseMarkdown(incorrectMarkdown);
     const errors = validateStructure(structure, templates['How-to']);
-    expect(errors).to.be.an('array').that is.not.empty;
+    expect(errors).to.be.an('array').that.is.not.empty;
   });
 
   it('should detect errors in an incorrect AsciiDoc file structure', () => {
@@ -62,6 +62,6 @@ describe('Markdown and AsciiDoc Structure Linter', () => {
     const structure = parseAsciiDoc(incorrectAsciidoc);
     console.log('Incorrect AsciiDoc structure:', JSON.stringify(structure, null, 2));
     const errors = validateStructure(structure, templates['How-to']);
-    expect(errors).to.be.an('array').that is.not.empty;
+    expect(errors).to.be.an('array').that.is.not.empty;
   });
 });

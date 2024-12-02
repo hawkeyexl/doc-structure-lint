@@ -1,6 +1,6 @@
-# Markdown and AsciiDoc Structure Linter
+# Doc Structure Linter
 
-Markdown and AsciiDoc Structure Linter is a tool designed to validate the structure of Markdown and AsciiDoc files against predefined templates. It ensures that your documents adhere to specific structural requirements, making it ideal for maintaining consistency in documentation across projects.
+Doc Structure Linter is a tool designed to validate the structure of documents (Markdown and soon AsciiDoc) against predefined templates. It ensures that your documents adhere to specific structural requirements, making it ideal for maintaining consistency in documentation across projects.
 
 ## Features
 
@@ -14,13 +14,15 @@ Markdown and AsciiDoc Structure Linter is a tool designed to validate the struct
 ## Installation
 
 1. Clone this repository:
-   ```
+
+   ```bash
    git clone https://github.com/your-username/markdown-structure-linter.git
    cd markdown-structure-linter
    ```
 
 2. Install dependencies:
-   ```
+
+   ```bash
    npm install
    ```
 
@@ -28,7 +30,7 @@ Markdown and AsciiDoc Structure Linter is a tool designed to validate the struct
 
 To use the Markdown and AsciiDoc Structure Linter, you need a Markdown or AsciiDoc file to lint and a template to lint against. The basic command structure is:
 
-```
+```bash
 node index.js --file <path-to-file> --template <template-name>
 ```
 
@@ -40,18 +42,21 @@ node index.js --file <path-to-file> --template <template-name>
 
 ### Examples
 
-1. Lint a Markdown file using the "How-to" template:
-   ```
+- Lint a Markdown file using the "How-to" template:
+
+   ```bash
    node index.js --file ./docs/how-to-guide.md --template How-to
    ```
 
-2. Lint an AsciiDoc file using the "How-to" template:
-   ```
+- Lint an AsciiDoc file using the "How-to" template:
+
+   ```bash
    node index.js --file ./docs/how-to-guide.adoc --template How-to
    ```
 
-3. Lint a file and output results in JSON format:
-   ```
+- Lint a file and output results in JSON format:
+
+   ```bash
    node index.js --file ./docs/api-reference.md --template API-doc --json
    ```
 
@@ -59,7 +64,7 @@ node index.js --file <path-to-file> --template <template-name>
 
 The project is organized into the following structure:
 
-```
+```txt
 markdown-structure-linter/
 ├── src/
 │   ├── schema.js
@@ -98,7 +103,7 @@ For more information on creating and modifying templates, refer to the comments 
 
 When run without the `--json` flag, the linter provides human-readable output:
 
-```
+```txt
 Structure violations found:
 - [Introduction] (start: 0, end: 150): Expected at least 2 paragraphs, but found 1
 - [Usage] (start: 151, end: 500): Missing required section "Examples"
