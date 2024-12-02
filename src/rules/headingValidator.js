@@ -5,8 +5,7 @@ export function validateHeading(section, template) {
   if (template.heading.const && section.heading.content !== template.heading.const) {
     errors.push({
       head: section.heading.content,
-      startIndex: section.startIndex,
-      endIndex: section.endIndex,
+      position: section.position,
       message: `Expected title "${template.heading.const}", but found "${section.heading.content}"`,
     });
   }
@@ -15,8 +14,7 @@ export function validateHeading(section, template) {
   if (template.heading.pattern && !template.heading.pattern.test(section.heading.content)) {
     errors.push({
       head: section.heading.content,
-      startIndex: section.startIndex,
-      endIndex: section.endIndex,
+      position: section.position,
       message: `Title "${section.heading.content}" doesn't match pattern "${template.heading.pattern}"`,
     });
   }

@@ -1,6 +1,6 @@
 {
   "name": "doc-structure-lint",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
     "markdown-structure-lint": "index.js"
@@ -17,15 +17,15 @@
     "@apidevtools/json-schema-ref-parser": "^11.7.2",
     "ajv": "^8.17.1",
     "asciidoctor": "^3.0.4",
-    "markdown-it": "^14.1.0",
-    "markdown-it-front-matter": "^0.2.4",
-    "uuid": "^10.0.0",
-    "yaml": "^2.6.0",
+    "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "uuid": "^11.0.3",
+    "yaml": "^2.6.1",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "chai": "^5.1.1",
-    "mocha": "^10.7.3",
+    "chai": "^5.1.2",
+    "mocha": "^11.0.1",
     "sinon": "^19.0.2"
   }
 }

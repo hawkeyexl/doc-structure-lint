@@ -81,7 +81,7 @@ async function main() {
     // Output results in text format
     if (errors.length > 0) {
       console.log("Structure violations found:");
-      errors.forEach((error) => console.log(`- [${error.head}] (start: ${error.startIndex}, end: ${error.endIndex}): ${error.message}`));
+      errors.forEach((error) => console.log(`- [${error.head}] (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`));
       process.exit(1);
     } else {
       console.log("No structure violations found.");

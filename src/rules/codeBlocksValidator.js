@@ -9,8 +9,7 @@ export function validateCodeBlocks(section, template) {
     ) {
       errors.push({
         head: section.heading.content,
-        startIndex: section.startIndex,
-        endIndex: section.endIndex,
+        position: section.position,
         message: `Expected at least ${template.code_blocks.min} code blocks, but found ${section.codeBlocks.length}`,
       });
     }
@@ -22,8 +21,7 @@ export function validateCodeBlocks(section, template) {
     ) {
       errors.push({
         head: section.heading.content,
-        startIndex: section.startIndex,
-        endIndex: section.endIndex,
+        position: section.position,
         message: `Expected at most ${template.code_blocks.max} code blocks, but found ${section.codeBlocks.length}`,
       });
     }

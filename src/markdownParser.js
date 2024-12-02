@@ -1,98 +1,109 @@
-import MarkdownIt from "markdown-it";
-import markdownItFrontMatter from "markdown-it-front-matter";
+import { remark } from "remark";
+import remarkFrontmatter from "remark-frontmatter";
 import { v4 as uuid } from "uuid";
 
-const md = new MarkdownIt().use(markdownItFrontMatter, function (fm) {});
-
 export function parseMarkdown(content) {
-  const tokens = md.parse(content, {});
+  const tree = remark().use(remarkFrontmatter).parse(content);
   let currentSection = null;
-  let charIndex = 0;
 
   const result = {
     frontmatter: [],
     sections: [],
   };
 
-  for (const token of tokens) {
-    charIndex += token.content.length;
+  const updateParentPositions = (section, endPosition) => {
+    if (!section || !endPosition) return;
 
-    if (token.type === "front_matter") {
-      let items = token.meta.trim().split("\n");
-      items = items.map((item) => {
-        const parts = item.split(":");
-        return {
-          key: parts[0].trim(),
-          value: parts.slice(1).join(":").trim(),
-        };
-      });
+    // Ensure position object exists
+    if (!section.position) {
+      section.position = {
+        start: { line: 0, column: 0, offset: 0 },
+        end: { line: 0, column: 0, offset: 0 },
+      };
+    }
+
+    // Update section's end position if the new end position is greater
+    if (section.position.end.offset < endPosition.offset) {
+      section.position.end = { ...endPosition };
+    }
+
+    // Find and update parent's position
+    const parent = findParent(result, section.id);
+    if (parent && parent.position) {
+      updateParentPositions(parent, endPosition);
+    }
+  };
+
+  const processNode = (node, parentSection) => {
+    if (node.type === "yaml") {
+      const items = node.value
+        .trim()
+        .split("\n")
+        .map((item) => {
+          const parts = item.split(":");
+          return {
+            key: parts[0].trim(),
+            value: parts.slice(1).join(":").trim(),
+          };
+        });
       result.frontmatter = items;
-    } else if (token.type === "heading_open") {
-      const level = parseInt(token.tag.slice(1));
-
+    } else if (node.type === "heading") {
+      // Ensure result has a position object before creating new section
       const newSection = {
-        id: `${uuid()}`,
-        startIndex: charIndex,
-        endIndex: `null`,
+        id: uuid(),
+        position: node.position,
         heading: {
-          level,
-          startIndex: charIndex,
-          endIndex: null,
-          content: "",
+          level: node.depth,
+          position: node.position,
+          content: node.children.map((child) => child.value).join(""),
         },
         paragraphs: [],
         codeBlocks: [],
         sections: [],
       };
 
-      if (level === 1) {
+      // Update parent section's end position
+      if (parentSection) {
+        updateParentPositions(parentSection, node.position.end);
+      }
+
+      if (node.depth === 1) {
         result.sections.push(newSection);
-      } else if (level > currentSection.heading.level) {
+      } else if (currentSection && node.depth > currentSection.heading.level) {
         currentSection.sections.push(newSection);
-      } else if (level <= currentSection.heading.level) {
+      } else if (currentSection && node.depth <= currentSection.heading.level) {
         let parent = findParent(result, currentSection.id);
-        while (level <= parent.heading.level) {
+        while (parent && node.depth <= parent.heading.level) {
           parent = findParent(result, parent.id);
         }
-        parent.sections.push(newSection);
+        if (parent) {
+          parent.sections.push(newSection);
+        }
       }
-
 
       currentSection = newSection;
-    } else if (
-      token.type === "inline" &&
-      currentSection &&
-      !currentSection.heading.content
-    ) {
-      currentSection.heading.content = token.content;
-      currentSection.heading.endIndex = charIndex;
-    } else if (token.type === "paragraph_open") {
+    } else if (node.type === "paragraph") {
       const paragraph = {
-        startIndex: charIndex,
-        endIndex: null,
-        content: "",
+        position: node.position,
+        content: node.children.map((child) => child.value).join(""),
       };
+      updateParentPositions(parentSection, node.position.end);
       currentSection.paragraphs.push(paragraph);
-    } else if (
-      token.type === "inline" &&
-      currentSection.paragraphs.length > 0
-    ) {
-      const paragraph =
-        currentSection.paragraphs[currentSection.paragraphs.length - 1];
-      paragraph.content += token.content;
-      paragraph.endIndex = charIndex;
-    } else if (token.type === "fence") {
+    } else if (node.type === "code") {
       const codeBlock = {
-        startIndex: charIndex,
-        endIndex: charIndex + token.content.length,
-        content: `\`\`\`${token.info}\n${token.content}\`\`\``,
+        position: node.position,
+        content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
       };
-      if (!currentSection.codeBlocks) {
-        currentSection.codeBlocks = [];
-      }
+      updateParentPositions(parentSection, node.position.end);
       currentSection.codeBlocks.push(codeBlock);
     }
-  }
+
+    if (node.children) {
+      node.children.forEach((child) => processNode(child, currentSection));
+    }
+  };
+
+  processNode(tree, null);
 
   return result;
 }
@@ -101,18 +112,18 @@ export function parseMarkdown(content) {
 function findParent(obj, targetId, parent = null) {
   // If current object has the target ID, return its parent
   if (obj.id === targetId) {
-      return parent;
+    return parent;
   }
-  
+
   // If object has sections, search through them
   if (obj.sections && Array.isArray(obj.sections)) {
-      for (const section of obj.sections) {
-          const result = findParent(section, targetId, obj);
-          if (result !== null) {
-              return result;
-          }
+    for (const section of obj.sections) {
+      const result = findParent(section, targetId, obj);
+      if (result !== null) {
+        return result;
       }
+    }
   }
-  
+
   return null;
 }
