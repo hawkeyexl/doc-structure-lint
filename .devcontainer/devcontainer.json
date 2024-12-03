@@ -1,0 +1,16 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/universal:2",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "esbenp.prettier-vscode",
+                "hbenl.vscode-mocha-test-adapter",
+                "nilobarp.javascript-test-runner",
+                "aaron-bond.better-comments",
+                "hbenl.vscode-test-explorer"
+            ]
+        }
+    }
+}
