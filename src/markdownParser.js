@@ -34,7 +34,7 @@ export function parseMarkdown(content) {
     }
   };
 
-const processSection = (node) => {
+  const processSection = (node) => {
     const newSection = {
       id: uuid(),
       position: node.position,
@@ -49,7 +49,6 @@ const processSection = (node) => {
       sections: [],
     };
   };
-}
 
   const processParagraph = (node) => {
     const result = {
@@ -57,7 +56,7 @@ const processSection = (node) => {
       content: node.children.map((child) => child.value).join(""),
     };
     return result;
-  }
+  };
 
   const processCodeBlock = (node) => {
     const result = {
@@ -65,7 +64,7 @@ const processSection = (node) => {
       content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
     };
     return result;
-  }
+  };
 
   const processNode = (node, parentSection) => {
     if (node.type === "yaml") {
@@ -116,10 +115,10 @@ const processSection = (node) => {
       const list = {
         position: node.position,
         ordered: node.ordered,
-        items: node.children.map(item => ({
+        items: node.children.map((item) => ({
           position: item.position,
-          content: item.children.map(child => child.value).join("")
-        }))
+          content: item.children.map((child) => child.value).join(""),
+        })),
       };
       updateParentPositions(parentSection, node.position.end);
       currentSection.lists.push(list);
