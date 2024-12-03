@@ -2,6 +2,7 @@ import { validateHeading } from "./rules/headingValidator.js";
 import { validateParagraphs } from "./rules/paragraphsValidator.js";
 import { validateCodeBlocks } from "./rules/codeBlocksValidator.js";
 import { validateLists } from "./rules/listValidator.js";
+import { validateSequence } from "./rules/sequenceValidator.js";
 
 export { validateStructure, validateSection };
 
@@ -29,6 +30,11 @@ function validateStructure(structure, template) {
 
 function validateSection(structureSection, templateSection) {
   let errors = [];
+
+  // Check sequence if defined
+  if (templateSection.sequence) {
+    errors = errors.concat(validateSequence(structureSection, templateSection));
+  }
 
   // Check heading
   if (templateSection.heading && structureSection.heading) {
