@@ -38,6 +38,7 @@ export function parseMarkdown(content) {
     const newSection = {
       id: uuid(),
       position: node.position,
+      content: [],
       heading: {
         level: node.depth,
         position: node.position,
@@ -53,23 +54,22 @@ export function parseMarkdown(content) {
 
   const processParagraph = (node) => {
     const result = {
-      position: node.position,
       content: node.children.map((child) => child.value).join(""),
+      position: node.position,
     };
     return result;
   };
 
   const processCodeBlock = (node) => {
     const result = {
-      position: node.position,
       content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
+      position: node.position,
     };
     return result;
   };
 
   const processList = (node) => {
     const result = {
-      position: node.position,
       ordered: node.ordered,
       items: node.children.map((item) => {
         if (item.type === "listItem") {
@@ -88,11 +88,12 @@ export function parseMarkdown(content) {
                     position: child.position,
                     content: child.value || "",
                   };
-                }
+              }
             }),
           };
         }
       }),
+      position: node.position,
     };
     return result;
   };
@@ -137,14 +138,17 @@ export function parseMarkdown(content) {
     } else if (node.type === "paragraph") {
       const paragraph = processParagraph(node);
       updateParentPositions(parentSection, node.position.end);
+      currentSection.content.push({ type: "paragraph", element: paragraph });
       currentSection.paragraphs.push(paragraph);
     } else if (node.type === "code") {
       const codeBlock = processCodeBlock(node);
       updateParentPositions(parentSection, node.position.end);
+      currentSection.content.push({ type: "code_block", element: codeBlock});
       currentSection.codeBlocks.push(codeBlock);
     } else if (node.type === "list") {
       const list = processList(node);
       updateParentPositions(parentSection, node.position.end);
+      currentSection.content.push({ type: "list", element: list});
       currentSection.lists.push(list);
     }
 
