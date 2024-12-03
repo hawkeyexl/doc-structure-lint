@@ -95,6 +95,23 @@ export const schema = {
         }
       },
     },
+    sequence_item: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          enum: ["paragraph", "code_block", "list", "section"]
+        },
+        min: {
+          type: "integer",
+          minimum: 0
+        },
+        max: {
+          type: "integer"
+        }
+      },
+      required: ["type"]
+    },
     section: {
       description: "A section of a document demarkated by a heading",
       type: "object",
@@ -144,6 +161,13 @@ export const schema = {
           description: "Allow undefined sections",
           type: "boolean",
           default: false,
+        },
+        sequence: {
+          description: "Ordered sequence of elements in the section",
+          type: "array",
+          items: {
+            $ref: "#/definitions/sequence_item"
+          }
         },
         sections: {
           description: "Object of subsections",
