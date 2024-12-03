@@ -38,39 +38,17 @@ export function validateSequence(structure, template) {
     return errors;
   }
 
+  // Validate each sequence item against rules
   for (
-    let sequencePosition = 0;
-    sequencePosition < template.sequence.length;
-    sequencePosition++
+    let index = 0;
+    index < template.sequence.length;
+    index++
   ) {
-    // Get template sequence item and structure item
-    const templateItem = template.sequence[sequencePosition];
-    const templateItemType = Object.keys(templateItem)[0];
+    const templateItem = template.sequence[index];
+    const structureItem = structure.content[index];
+    const type = templateItemTypes[index];
 
-    let structureItem = structure.content[sequencePosition];
-    let structureItemType;
-
-    if (structureItem.hasOwnProperty("paragraphs")) {
-      structureItemType = "paragraphs";
-    } else if (structureItem.hasOwnProperty("code_blocks")) {
-      structureItemType = "code_blocks";
-    } else if (structureItem.hasOwnProperty("lists")) {
-      structureItemType = "lists";
-    }
-
-    // Validate sequence order with position information
-    if (structureItemType !== templateItemType) {
-      errors.push({
-        type: "sequence_order_error",
-        head: structureItem.heading.content,
-        message: `Expected ${templateItemType} but found ${structureItemType}`,
-        position: structureItem.position,
-      });
-      break;
-    }
-
-    // Validate content type specific rules with position context
-    switch (templateItemType) {
+    switch (type) {
       case "paragraphs":
         errors.push(...validateParagraphs(structureItem, templateItem));
         break;
