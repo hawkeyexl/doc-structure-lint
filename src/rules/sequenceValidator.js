@@ -13,12 +13,19 @@ export function validateSequence(structure, template) {
     for (const item of structure.content) {
       item.heading = structure.heading;
 
-      const contentType = Object.keys(item)[0];
+      let contentType;
+      if (item.hasOwnProperty("paragraphs")) {
+        contentType = "paragraphs";
+      } else if (item.hasOwnProperty("code_blocks")) {
+        contentType = "code_blocks";
+      } else if (item.hasOwnProperty("lists")) {
+        contentType = "lists";
+      }
       if (contentType !== itemType) {
         errors.push({
           type: "sequence_order_error",
           head: item.heading.content,
-          message: `${contentType} found out of sequence at position ${position}`,
+          message: `${contentType} found out of sequence at position`,
           position: item.position,
         });
       }
