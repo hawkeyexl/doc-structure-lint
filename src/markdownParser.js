@@ -34,6 +34,23 @@ export function parseMarkdown(content) {
     }
   };
 
+const processSection = (node) => {
+    const newSection = {
+      id: uuid(),
+      position: node.position,
+      heading: {
+        level: node.depth,
+        position: node.position,
+        content: node.children.map((child) => child.value).join(""),
+      },
+      paragraphs: [],
+      codeBlocks: [],
+      lists: [],
+      sections: [],
+    };
+  };
+}
+
   const processParagraph = (node) => {
     const result = {
       position: node.position,
@@ -65,18 +82,7 @@ export function parseMarkdown(content) {
       result.frontmatter = items;
     } else if (node.type === "heading") {
       // Ensure result has a position object before creating new section
-      const newSection = {
-        id: uuid(),
-        position: node.position,
-        heading: {
-          level: node.depth,
-          position: node.position,
-          content: node.children.map((child) => child.value).join(""),
-        },
-        paragraphs: [],
-        codeBlocks: [],
-        sections: [],
-      };
+      const newSection = processSection(node);
 
       // Update parent section's end position
       if (parentSection) {
@@ -106,11 +112,17 @@ export function parseMarkdown(content) {
       const codeBlock = processCodeBlock(node);
       updateParentPositions(parentSection, node.position.end);
       currentSection.codeBlocks.push(codeBlock);
+    } else if (node.type === "list") {
+      const list = {
         position: node.position,
-        content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
+        ordered: node.ordered,
+        items: node.children.map(item => ({
+          position: item.position,
+          content: item.children.map(child => child.value).join("")
+        }))
       };
       updateParentPositions(parentSection, node.position.end);
-      currentSection.codeBlocks.push(codeBlock);
+      currentSection.lists.push(list);
     }
 
     if (node.children) {
