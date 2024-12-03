@@ -16,6 +16,12 @@ Before you begin, make sure you have the following:
 - A valid license key
 - At least 4GB of RAM
 
+- foo
+- bar
+
+- x
+- y
+
 ## Setup
 
 Follow these steps to set up our amazing product:

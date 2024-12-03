@@ -148,7 +148,7 @@ export function parseMarkdown(content) {
       currentSection.lists.push(list);
     }
 
-    if (node.children) {
+    if (node.children && node.type !== "list") {
       node.children.forEach((child) => processNode(child, currentSection));
     }
   };

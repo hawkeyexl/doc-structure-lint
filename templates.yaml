@@ -78,4 +78,6 @@ components:
         const: Next steps             # Back to an H2 level section
       required: false               # Allow the section to be omitted
       paragraphs:
-        min: 2
+        min: 1
+      lists:
+        min: 1
