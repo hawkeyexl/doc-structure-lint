@@ -34,6 +34,22 @@ export function parseMarkdown(content) {
     }
   };
 
+  const processParagraph = (node) => {
+    const result = {
+      position: node.position,
+      content: node.children.map((child) => child.value).join(""),
+    };
+    return result;
+  }
+
+  const processCodeBlock = (node) => {
+    const result = {
+      position: node.position,
+      content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
+    };
+    return result;
+  }
+
   const processNode = (node, parentSection) => {
     if (node.type === "yaml") {
       const items = node.value
@@ -83,14 +99,13 @@ export function parseMarkdown(content) {
 
       currentSection = newSection;
     } else if (node.type === "paragraph") {
-      const paragraph = {
-        position: node.position,
-        content: node.children.map((child) => child.value).join(""),
-      };
+      const paragraph = processParagraph(node);
       updateParentPositions(parentSection, node.position.end);
       currentSection.paragraphs.push(paragraph);
     } else if (node.type === "code") {
-      const codeBlock = {
+      const codeBlock = processCodeBlock(node);
+      updateParentPositions(parentSection, node.position.end);
+      currentSection.codeBlocks.push(codeBlock);
         position: node.position,
         content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
       };
