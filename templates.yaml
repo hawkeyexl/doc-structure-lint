@@ -48,6 +48,11 @@ templates:                            # Array of templates, each with a unique k
               const: Prerequisites          # Require the section to be titled "Prerequisites"
             paragraphs:
               max: 3
+            lists:
+              max: 1
+              items:
+                min: 1
+                max: 7
           Setup:
             paragraphs:
               max: 5                      # Allow a maximum of 5 paragraphs

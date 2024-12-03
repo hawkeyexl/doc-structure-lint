@@ -19,6 +19,82 @@ export const schema = {
     },
   },
   definitions: {
+    paragraphs: {
+      type: "object",
+      properties: {
+        min: {
+          description: "Minimum number of paragraphs",
+          type: "integer",
+          minimum: 0,
+        },
+        max: {
+          description: "Maximum number of paragraphs",
+          type: "integer",
+        },
+        patterns: {
+          description:
+            "Array of regex patterns for paragraphs, applied in sequence to paragraphs as they appear",
+          type: "array",
+          items: {
+            type: "string",
+          },
+        },
+      },
+    },
+    code_blocks: {
+      description: "Code block requirements",
+      type: "object",
+      properties: {
+        min: {
+          description: "Minimum number of code blocks",
+          type: "integer",
+          minimum: 0,
+        },
+        max: {
+          description: "Maximum number of code blocks",
+          type: "integer",
+        },
+      },
+    },
+    lists: {
+      description: "List requirements",
+      type: "object",
+      properties: {
+        min: {
+          description: "Minimum number of lists",
+          type: "integer",
+          minimum: 0,
+        },
+        max: {
+          description: "Maximum number of lists",
+          type: "integer",
+        },
+        items: {
+          description: "Item requirements",
+          type: "object",
+          properties: {
+            min: {
+              description: "Minimum number of items in a list",
+              type: "integer",
+              minimum: 0,
+            },
+            max: {
+              description: "Maximum number of items in a list",
+              type: "integer",
+            },
+            paragraphs: {
+              $ref: "#/definitions/paragraphs",
+            },
+            code_blocks: {
+              $ref: "#/definitions/code_blocks",
+            },
+            lists: {
+              $ref: "#/definitions/lists",
+            }
+          },
+        }
+      },
+    },
     section: {
       description: "A section of a document demarkated by a heading",
       type: "object",
@@ -56,41 +132,13 @@ export const schema = {
           default: true,
         },
         paragraphs: {
-          type: "object",
-          properties: {
-            min: {
-              description: "Minimum number of paragraphs",
-              type: "integer",
-              minimum: 0,
-            },
-            max: {
-              description: "Maximum number of paragraphs",
-              type: "integer",
-            },
-            patterns: {
-              description:
-                "Array of regex patterns for paragraphs, applied in sequence to paragraphs as they appear",
-              type: "array",
-              items: {
-                type: "string",
-              },
-            },
-          },
+          $ref: "#/definitions/paragraphs",
         },
         code_blocks: {
-          description: "Code block requirements",
-          type: "object",
-          properties: {
-            min: {
-              description: "Minimum number of code blocks",
-              type: "integer",
-              minimum: 0,
-            },
-            max: {
-              description: "Maximum number of code blocks",
-              type: "integer",
-            },
-          },
+          $ref: "#/definitions/code_blocks",
+        },
+        lists: {
+          $ref: "#/definitions/lists",
         },
         additionalSections: {
           description: "Allow undefined sections",

@@ -1,6 +1,7 @@
 import { validateHeading } from "./rules/headingValidator.js";
 import { validateParagraphs } from "./rules/paragraphsValidator.js";
 import { validateCodeBlocks } from "./rules/codeBlocksValidator.js";
+import { validateLists } from "./rules/listValidator.js";
 
 export { validateStructure, validateSection };
 
@@ -46,6 +47,11 @@ function validateSection(structureSection, templateSection) {
     errors = errors.concat(
       validateCodeBlocks(structureSection, templateSection)
     );
+  }
+
+  // Check lists
+  if (templateSection.lists && structureSection.lists) {
+    errors = errors.concat(validateLists(structureSection, templateSection));
   }
 
   // Check subsections
