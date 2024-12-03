@@ -6,11 +6,33 @@ export function validateSequence(structure, template) {
   const errors = [];
   if (!template.sequence || !structure.content) return errors;
 
+  // Check sequence length
   if (template.sequence.length !== structure.content.length) {
     errors.push({
       type: "sequence_length_error",
       head: structure.heading.content,
       message: `Expected ${template.sequence.length} content types in sequence, but found ${structure.content.length}`,
+      position: structure.position,
+    });
+    return errors;
+  }
+
+  // Check sequence order
+  const templateItemTypes = template.sequence.map(item => Object.keys(item)[0]);
+  const structureItemTypes = structure.content.map(item => {
+    if (item.hasOwnProperty("paragraphs")) {
+      return "paragraphs";
+    } else if (item.hasOwnProperty("code_blocks")) {
+      return "code_blocks";
+    } else if (item.hasOwnProperty("lists")) {
+      return "lists";
+    }
+  });
+  if (JSON.stringify(templateItemTypes) !== JSON.stringify(structureItemTypes)) {
+    errors.push({
+      type: "sequence_order_error",
+      head: structure.heading.content,
+      message: `Expected ${JSON.stringify(templateItemTypes)} but found ${JSON.stringify(structureItemTypes)}`,
       position: structure.position,
     });
     return errors;
