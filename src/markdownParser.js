@@ -48,6 +48,7 @@ export function parseMarkdown(content) {
       lists: [],
       sections: [],
     };
+    return newSection;
   };
 
   const processParagraph = (node) => {
@@ -62,6 +63,36 @@ export function parseMarkdown(content) {
     const result = {
       position: node.position,
       content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
+    };
+    return result;
+  };
+
+  const processList = (node) => {
+    const result = {
+      position: node.position,
+      ordered: node.ordered,
+      items: node.children.map((item) => {
+        if (item.type === "listItem") {
+          return {
+            position: item.position,
+            content: item.children.map((child) => {
+              switch (child.type) {
+                case "paragraph":
+                  return processParagraph(child);
+                case "code":
+                  return processCodeBlock(child);
+                case "list":
+                  return processList(child);
+                default:
+                  return {
+                    position: child.position,
+                    content: child.value || "",
+                  };
+                }
+            }),
+          };
+        }
+      }),
     };
     return result;
   };
@@ -112,14 +143,7 @@ export function parseMarkdown(content) {
       updateParentPositions(parentSection, node.position.end);
       currentSection.codeBlocks.push(codeBlock);
     } else if (node.type === "list") {
-      const list = {
-        position: node.position,
-        ordered: node.ordered,
-        items: node.children.map((item) => ({
-          position: item.position,
-          content: item.children.map((child) => child.value).join(""),
-        })),
-      };
+      const list = processList(node);
       updateParentPositions(parentSection, node.position.end);
       currentSection.lists.push(list);
     }
