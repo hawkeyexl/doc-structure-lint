@@ -97,6 +97,7 @@ export const schema = {
     },
     sequence_item: {
       type: "object",
+      additionalProperties: false,
       anyOf: [
         {
           properties: {
