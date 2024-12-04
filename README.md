@@ -5,7 +5,7 @@ Doc Structure Linter is a tool designed to validate the structure of documents (
 ## Features
 
 - Validate Markdown and AsciiDoc files against custom templates
-- Automatically detect file type based on extension or content
+- Validate ordered sequences of content elements within sections
 - Check for required sections, paragraph counts, and code block requirements
 - Flexible template definitions using YAML
 - Output results in both human-readable text and structured JSON formats
@@ -90,6 +90,7 @@ markdown-structure-linter/
 
 Templates are defined in the `templates.yaml` file. Each template specifies the expected structure of a document, including:
 
+- Sequencing of content within sections
 - Required sections
 - Paragraph count limits
 - Code block requirements
