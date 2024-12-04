@@ -26,8 +26,21 @@ export function validateSequence(structure, template) {
       return "code_blocks";
     } else if (Object.hasOwn(item, "lists")) {
       return "lists";
+    } else {
+      return null;
     }
   });
+  // Check for unexpected content types
+  if (structureItemTypes.includes(null)) {
+    errors.push({
+      type: "sequence_order_error",
+      head: structure.heading.content,
+      message: `Unexpected content type (${type}) found in sequence`,
+      position: structure.position,
+    });
+    return errors;
+  }
+  // Check for sequence order mismatch
   if (JSON.stringify(templateItemTypes) !== JSON.stringify(structureItemTypes)) {
     errors.push({
       type: "sequence_order_error",
@@ -60,6 +73,14 @@ export function validateSequence(structure, template) {
       case "lists":
         errors.push(...validateLists(structureItem, templateItem));
         break;
+
+      default:
+        errors.push({
+          type: "sequence_order_error",
+          head: structure.heading.content,
+          message: `Unexpected content type (${type}) found in sequence`,
+          position: structure.position,
+        });
     }
   }
 
