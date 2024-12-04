@@ -5,8 +5,8 @@ import path from "path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import { loadAndValidateTemplates } from "./src/templateLoader.js";
-import { parseMarkdown } from "./src/markdownParser.js";
-import { parseAsciiDoc } from "./src/asciidocParser.js";
+import { parseMarkdown } from "./src/parsers/markdown.js";
+import { parseAsciiDoc } from "./src/parsers/asciidoc.js";
 import { validateStructure } from "./src/structureValidator.js";
 
 const inferFileType = (filePath, content) => {
