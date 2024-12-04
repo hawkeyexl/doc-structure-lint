@@ -26,6 +26,44 @@ const inferFileType = (filePath, content) => {
   return "markdown";
 };
 
+/**
+ * Lints a document against a specified template.
+ *
+ * @param {Object} params - The parameters for the linting function.
+ * @param {string} params.file - The path to the file to be linted.
+ * @param {string} params.templatePath - The path to the directory containing templates.
+ * @param {string} params.template - The name of the template to use for linting.
+ * @returns {Promise<Object>} The result of the linting process.
+ * @returns {boolean} returns.success - Indicates if the linting was successful.
+ * @returns {Array} returns.errors - An array of errors found during linting.
+ * @throws {Error} If the file type is unsupported or the template is not found.
+ */
+export async function lintDocument({ file, templatePath, template }) {
+  const templates = await loadAndValidateTemplates(templatePath);
+  const fileContent = readFileSync(file, "utf8");
+  const fileType = inferFileType(file, fileContent);
+
+  let structure;
+  if (fileType === "markdown") {
+    structure = parseMarkdown(fileContent);
+  } else if (fileType === "asciidoc") {
+    structure = parseAsciiDoc(fileContent);
+  } else {
+    throw new Error(`Unsupported file type: ${fileType}`);
+  }
+
+  const templateConfig = templates[template];
+  if (!templateConfig) {
+    throw new Error(`Template "${template}" not found`);
+  }
+
+  const errors = validateStructure(structure, templateConfig);
+  return {
+    success: errors.length === 0,
+    errors: errors,
+  };
+}
+
 async function main() {
   // Parse command-line arguments
   const argv = yargs(hideBin(process.argv))
@@ -55,55 +93,38 @@ async function main() {
     .help()
     .alias("help", "h").argv;
 
-  const templates = await loadAndValidateTemplates(argv.templatePath);
+  try {
+    const result = await lintDocument({
+      file: argv.file,
+      templatePath: argv.templatePath,
+      template: argv.template,
+    });
 
-  // Read and lint the file
-  const fileContent = readFileSync(argv.file, "utf8");
-  const fileType = inferFileType(argv.file, fileContent);
-
-  let structure;
-  if (fileType === "markdown") {
-    structure = parseMarkdown(fileContent);
-  } else if (fileType === "asciidoc") {
-    structure = parseAsciiDoc(fileContent);
-  } else {
-    console.error(`Unsupported file type: ${fileType}`);
-    process.exit(1);
-  }
-
-  const template = templates[argv.template];
-
-  if (!template) {
-    console.error(`Template "${argv.template}" not found`);
-    process.exit(1);
-  }
-
-  const errors = validateStructure(structure, template);
-
-  if (argv.json) {
-    // Output results in JSON format
-    const result = {
-      success: errors.length === 0,
-      errors: errors,
-    };
-    console.log(JSON.stringify(result, null, 2));
-  } else {
-    // Output results in text format
-    if (errors.length > 0) {
-      console.log("Structure violations found:");
-      errors.forEach((error) =>
-        console.log(
-          `- [${error.type}] ${error.heading} (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`
-        )
-      );
-      process.exit(1);
+    if (argv.json) {
+      console.log(JSON.stringify(result, null, 2));
     } else {
-      console.log("No structure violations found.");
+      if (result.errors.length > 0) {
+        console.log("Structure violations found:");
+        result.errors.forEach((error) =>
+          console.log(
+            `- [${error.type}] ${error.heading} (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`
+          )
+        );
+        process.exit(1);
+      } else {
+        console.log("No structure violations found.");
+      }
     }
+  } catch (error) {
+    console.error("An error occurred:", error);
+    process.exit(1);
   }
 }
 
-main().catch((error) => {
-  console.error("An error occurred:", error);
-  process.exit(1);
-});
+// Only run main() if this file is being executed directly
+if (process.argv[1].endsWith('doc-structure-lint')) {
+  main().catch((error) => {
+    console.error("An error occurred:", error);
+    process.exit(1);
+  });
+}
