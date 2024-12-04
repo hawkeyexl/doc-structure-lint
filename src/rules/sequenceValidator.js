@@ -63,19 +63,5 @@ export function validateSequence(structure, template) {
     }
   }
 
-  // Check for content not defined in sequence
-  const definedTypes = new Set(template.sequence.map((structureItem) => structureItem.type));
-  const unexpectedContent = structure.content.filter(
-    (structureItem) => !definedTypes.has(structureItem.type)
-  );
-
-  if (unexpectedContent.length > 0) {
-    errors.push({
-      type: "sequence_unexpected_content",
-      message: `Found ${unexpectedContent.length} content elements not defined in sequence`,
-      position: unexpectedContent[0].element?.position,
-    });
-  }
-
   return errors;
 }
