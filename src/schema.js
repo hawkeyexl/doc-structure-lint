@@ -97,9 +97,9 @@ export const schema = {
     },
     sequence_item: {
       type: "object",
-      additionalProperties: false,
       anyOf: [
         {
+          additionalProperties: false,
           properties: {
             paragraphs: {
               $ref: "#/definitions/paragraphs",
@@ -107,6 +107,7 @@ export const schema = {
           },
         },
         {
+          additionalProperties: false,
           properties: {
             code_blocks: {
               $ref: "#/definitions/code_blocks",
@@ -114,6 +115,7 @@ export const schema = {
           },
         },
         {
+          additionalProperties: false,
           properties: {
             lists: {
               $ref: "#/definitions/lists",
