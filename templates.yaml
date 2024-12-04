@@ -3,7 +3,7 @@ info:
   title: Sample Templates
   version: 1.0.0
 
-templates:                            # Array of templates, each with a unique key
+templates: # Array of templates, each with a unique key
   How-to:
     sections:
       Title:
@@ -33,19 +33,22 @@ templates:                            # Array of templates, each with a unique k
               const: See also
             paragraphs:
               min: 1
-  Sample:                             # Template definition correspondings to the H1 level of the document
-    sections:                         # Array of sections, each with a unique key
-      Introduction:                   # Each sections corresponds to a heading level one below the parent, starting with an H1 at the first level
+  Sample: # Template definition correspondings to the H1 level of the document
+    sections: # Array of sections, each with a unique key
+      Introduction: # Each sections corresponds to a heading level one below the parent, starting with an H1 at the first level
         description: A template for how-to guides that include prerequisites, setup, usage, troubleshooting, and next steps sections.
+        sequence:
+          - paragraphs:
+              min: 2
         paragraphs:
           min: 2
           max: 5
         code_blocks:
-          max: 1                          # Allow a maximum of 1 code block
-        sections:                         # Array of sections, each with a unique key
-          Prerequisites:                  # Each section corresponds to a heading level one below the parent, in this case Prerequisites is an H2
-            heading: 
-              const: Prerequisites          # Require the section to be titled "Prerequisites"
+          max: 1 # Allow a maximum of 1 code block
+        sections: # Array of sections, each with a unique key
+          Prerequisites: # Each section corresponds to a heading level one below the parent, in this case Prerequisites is an H2
+            heading:
+              const: Prerequisites # Require the section to be titled "Prerequisites"
             paragraphs:
               max: 3
             lists:
@@ -55,28 +58,28 @@ templates:                            # Array of templates, each with a unique k
                 max: 7
           Setup:
             paragraphs:
-              max: 5                      # Allow a maximum of 5 paragraphs
+              max: 5 # Allow a maximum of 5 paragraphs
           Usage:
             paragraphs:
               max: 4
             code_blocks:
-              min: 1                      # Require at least one code block
-            additionalSections: true     # Allow additional use case sections
+              min: 1 # Require at least one code block
+            additionalSections: true # Allow additional use case sections
             sections:
               Troubleshooting:
-                heading: 
-                  const: Troubleshooting    # Require the section to be titled "Troubleshooting"
+                heading:
+                  const: Troubleshooting # Require the section to be titled "Troubleshooting"
                 paragraphs:
                   max: 5
           Next steps:
-            $ref: '#/components/sections/Next steps'   # Reference the 'Next steps' section component
+            $ref: "#/components/sections/Next steps" # Reference the 'Next steps' section component
 
 components:
   sections:
     Next steps:
-      heading: 
-        const: Next steps             # Back to an H2 level section
-      required: false               # Allow the section to be omitted
+      heading:
+        const: Next steps # Back to an H2 level section
+      required: false # Allow the section to be omitted
       paragraphs:
         min: 1
       lists:

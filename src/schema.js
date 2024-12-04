@@ -90,27 +90,39 @@ export const schema = {
             },
             lists: {
               $ref: "#/definitions/lists",
-            }
+            },
           },
-        }
+        },
       },
     },
     sequence_item: {
       type: "object",
-      properties: {
-        type: {
-          type: "string",
-          enum: ["paragraph", "code_block", "list", "section"]
+      anyOf: [
+        {
+          additionalProperties: false,
+          properties: {
+            paragraphs: {
+              $ref: "#/definitions/paragraphs",
+            },
+          },
         },
-        min: {
-          type: "integer",
-          minimum: 0
+        {
+          additionalProperties: false,
+          properties: {
+            code_blocks: {
+              $ref: "#/definitions/code_blocks",
+            },
+          },
         },
-        max: {
-          type: "integer"
-        }
-      },
-      required: ["type"]
+        {
+          additionalProperties: false,
+          properties: {
+            lists: {
+              $ref: "#/definitions/lists",
+            },
+          },
+        },
+      ],
     },
     section: {
       description: "A section of a document demarkated by a heading",
@@ -148,6 +160,14 @@ export const schema = {
           type: "boolean",
           default: true,
         },
+        sequence: {
+          description: "Ordered sequence of elements in the section",
+          type: "array",
+          minItems: 1,
+          items: {
+            $ref: "#/definitions/sequence_item",
+          },
+        },
         paragraphs: {
           $ref: "#/definitions/paragraphs",
         },
@@ -161,13 +181,6 @@ export const schema = {
           description: "Allow undefined sections",
           type: "boolean",
           default: false,
-        },
-        sequence: {
-          description: "Ordered sequence of elements in the section",
-          type: "array",
-          items: {
-            $ref: "#/definitions/sequence_item"
-          }
         },
         sections: {
           description: "Object of subsections",

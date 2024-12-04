@@ -34,10 +34,38 @@ export function parseMarkdown(content) {
     }
   };
 
+  /**
+   * Adds a node to a section's content sequence based on the specified type.
+   * If the last element in the section's content is not of the specified type,
+   * a new sequence node is created and added to the content. Otherwise, the node
+   * is appended to the existing sequence of the same type.
+   *
+   * @param {Object} section - The section object containing the content array.
+   * @param {string} type - The type of the node to be added.
+   * @param {Object} node - The node to be added to the section's content.
+   */
+  const addToSequence = (section, type, node) => {
+    if (
+      section.content.length > 0 &&
+      Object.hasOwn(section.content[section.content.length - 1], type)
+    ) {
+      section.content[section.content.length - 1][type].push(node);
+      section.content[section.content.length - 1].position.end = node.position.end;
+    } else {
+      const sequenceNode = {
+        heading: section.heading,
+        position: node.position,
+      };
+      sequenceNode[type] = [node];
+      section.content.push(sequenceNode);
+    }
+  };
+
   const processSection = (node) => {
     const newSection = {
       id: uuid(),
       position: node.position,
+      content: [],
       heading: {
         level: node.depth,
         position: node.position,
@@ -53,23 +81,22 @@ export function parseMarkdown(content) {
 
   const processParagraph = (node) => {
     const result = {
-      position: node.position,
       content: node.children.map((child) => child.value).join(""),
+      position: node.position,
     };
     return result;
   };
 
   const processCodeBlock = (node) => {
     const result = {
-      position: node.position,
       content: `\`\`\`${node.lang}\n${node.value}\`\`\``,
+      position: node.position,
     };
     return result;
   };
 
   const processList = (node) => {
     const result = {
-      position: node.position,
       ordered: node.ordered,
       items: node.children.map((item) => {
         if (item.type === "listItem") {
@@ -88,11 +115,12 @@ export function parseMarkdown(content) {
                     position: child.position,
                     content: child.value || "",
                   };
-                }
+              }
             }),
           };
         }
       }),
+      position: node.position,
     };
     return result;
   };
@@ -137,14 +165,17 @@ export function parseMarkdown(content) {
     } else if (node.type === "paragraph") {
       const paragraph = processParagraph(node);
       updateParentPositions(parentSection, node.position.end);
+      addToSequence(currentSection, "paragraphs", paragraph);
       currentSection.paragraphs.push(paragraph);
     } else if (node.type === "code") {
       const codeBlock = processCodeBlock(node);
       updateParentPositions(parentSection, node.position.end);
+      addToSequence(currentSection, "code_blocks", codeBlock);
       currentSection.codeBlocks.push(codeBlock);
     } else if (node.type === "list") {
       const list = processList(node);
       updateParentPositions(parentSection, node.position.end);
+      addToSequence(currentSection, "lists", list);
       currentSection.lists.push(list);
     }
 
