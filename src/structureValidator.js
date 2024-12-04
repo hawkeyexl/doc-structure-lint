@@ -62,6 +62,7 @@ function validateSection(structureSection, templateSection) {
 
   // Check subsections
   if (templateSection.sections) {
+    const templateKey = Object.keys(templateSection.sections)[0];
     if (!structureSection.sections) {
       // Check for missing sections
       errors.push({
