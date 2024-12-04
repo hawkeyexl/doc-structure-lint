@@ -144,7 +144,7 @@ export function parseMarkdown(content) {
   };
 
   const processNode = (node, parentSection) => {
-    if (!currentSection && node.type !== "yaml" && node.type !== "heading") {
+    if (!currentSection && node.type !== "yaml" && node.type !== "heading" && node.type !== "root") {
       currentSection = createDefaultSection(node);
       result.sections.push(currentSection);
     }

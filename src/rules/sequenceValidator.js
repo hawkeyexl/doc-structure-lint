@@ -1,6 +1,7 @@
 import { validateParagraphs } from "./paragraphsValidator.js";
 import { validateCodeBlocks } from "./codeBlocksValidator.js";
 import { validateLists } from "./listValidator.js";
+import { ValidationError } from "./ValidationError.js";
 
 export function validateSequence(structure, template) {
   const errors = [];
@@ -8,12 +9,12 @@ export function validateSequence(structure, template) {
 
   // Check sequence length
   if (template.sequence.length !== structure.content.length) {
-    errors.push({
-      type: "sequence_length_error",
-      head: structure.heading.content,
-      message: `Expected ${template.sequence.length} content types in sequence, but found ${structure.content.length}`,
-      position: structure.position,
-    });
+    errors.push(new ValidationError(
+      "sequence_length_error",
+      structure.heading.content,
+      `Expected ${template.sequence.length} content types in sequence, but found ${structure.content.length}`,
+      structure.position
+    ));
     return errors;
   }
 
@@ -32,22 +33,22 @@ export function validateSequence(structure, template) {
   });
   // Check for unexpected content types
   if (structureItemTypes.includes(null)) {
-    errors.push({
-      type: "sequence_order_error",
-      head: structure.heading.content,
-      message: `Unexpected content type (${type}) found in sequence`,
-      position: structure.position,
-    });
+    errors.push(new ValidationError(
+      "sequence_order_error",
+      structure.heading.content,
+      `Unexpected content type (${type}) found in sequence`,
+      structure.position
+    ));
     return errors;
   }
   // Check for sequence order mismatch
   if (JSON.stringify(templateItemTypes) !== JSON.stringify(structureItemTypes)) {
-    errors.push({
-      type: "sequence_order_error",
-      head: structure.heading.content,
-      message: `Expected sequence ${JSON.stringify(templateItemTypes)}, but found sequence ${JSON.stringify(structureItemTypes)}`,
-      position: structure.position,
-    });
+    errors.push(new ValidationError(
+      "sequence_order_error",
+      structure.heading.content,
+      `Expected sequence ${JSON.stringify(templateItemTypes)}, but found sequence ${JSON.stringify(structureItemTypes)}`,
+      structure.position
+    ));
     return errors;
   }
 
@@ -75,12 +76,12 @@ export function validateSequence(structure, template) {
         break;
 
       default:
-        errors.push({
-          type: "sequence_order_error",
-          head: structure.heading.content,
-          message: `Unexpected content type (${type}) found in sequence`,
-          position: structure.position,
-        });
+        errors.push(new ValidationError(
+          "sequence_order_error",
+          structure.heading.content,
+          `Unexpected content type (${type}) found in sequence`,
+          structure.position
+        ));
     }
   }
 

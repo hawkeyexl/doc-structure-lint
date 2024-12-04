@@ -3,6 +3,7 @@ import { validateParagraphs } from "./rules/paragraphsValidator.js";
 import { validateCodeBlocks } from "./rules/codeBlocksValidator.js";
 import { validateLists } from "./rules/listValidator.js";
 import { validateSequence } from "./rules/sequenceValidator.js";
+import { ValidationError } from "./rules/ValidationError.js";
 
 export { validateStructure, validateSection };
 
@@ -64,27 +65,27 @@ function validateSection(structureSection, templateSection) {
   if (templateSection.sections) {
     const templateKey = Object.keys(templateSection.sections)[0];
     if (!structureSection.sections) {
-      // Check for missing sections
-      errors.push({
-        type: "missing_section",
-        section: templateKey,
-        message: `Missing section ${templateKey}`,
-      });
+      errors.push(new ValidationError(
+        "missing_section",
+        structureSection.heading?.content,
+        `Missing section ${templateKey}`,
+        structureSection.position
+      ));
     } else if (
-      // Check for section count mismatch
       structureSection.sections.length <
         Object.keys(templateSection.sections).length ||
       (structureSection.sections.length >
         Object.keys(templateSection.sections).length &&
         !templateSection.additionalSections)
     ) {
-      errors.push({
-        type: "section_count_mismatch",
-        section: templateKey,
-        message: `Expected ${
+      errors.push(new ValidationError(
+        "section_count_mismatch",
+        structureSection.heading?.content,
+        `Expected ${
           Object.keys(templateSection.sections).length
         } sections, but found ${structureSection.sections.length}`,
-      });
+        structureSection.position
+      ));
     } else if (
       // Check for additional sections
       structureSection.sections.length >
@@ -108,11 +109,12 @@ function validateSection(structureSection, templateSection) {
         }
         // If the section doesn't exist in the structure, add an error
         if (!sectionMap[j] && templateSubsection.required) {
-          errors.push({
-            type: "missing_section",
-            section: templateKey,
-            message: `Missing section ${templateKey}`,
-          });
+          errors.push(new ValidationError(
+            "missing_section",
+            structureSection.heading?.content,
+            `Missing section ${templateKey}`,
+            structureSection.position
+          ));
         }
       }
     } else {

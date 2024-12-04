@@ -1,3 +1,5 @@
+import { ValidationError } from "./ValidationError.js";
+
 export function validateParagraphs(section, template) {
   const errors = [];
 
@@ -7,11 +9,12 @@ export function validateParagraphs(section, template) {
       template.paragraphs.min &&
       section.paragraphs.length < template.paragraphs.min
     ) {
-      errors.push({
-        head: section.heading.content,
-        position: section.position,
-        message: `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs.length}`,
-      });
+      errors.push(new ValidationError(
+        "paragraphs_count_error",
+        section.heading?.content,
+        `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs.length}`,
+        section.position
+      ));
     }
 
     // Min
@@ -19,11 +22,12 @@ export function validateParagraphs(section, template) {
       template.paragraphs.max &&
       section.paragraphs.length > template.paragraphs.max
     ) {
-      errors.push({
-        head: section.heading.content,
-        position: section.position,
-        message: `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs.length}`,
-      });
+      errors.push(new ValidationError(
+        "paragraphs_count_error",
+        section.heading?.content,
+        `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs.length}`,
+        section.position
+      ));
     }
 
     // Patterns
