@@ -11,24 +11,22 @@ import { validateStructure } from "./src/structureValidator.js";
 
 const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
-  if (['.md', '.markdown'].includes(extension)) {
-    return 'markdown';
-  } else if (['.adoc', '.asciidoc'].includes(extension)) {
-    return 'asciidoc';
+  if ([".md", ".markdown"].includes(extension)) {
+    return "markdown";
+  } else if ([".adoc", ".asciidoc"].includes(extension)) {
+    return "asciidoc";
   }
 
   // If extension is not conclusive, check content
-  if (content.trim().startsWith('= ')) {
-    return 'asciidoc';
+  if (content.trim().startsWith("= ")) {
+    return "asciidoc";
   }
-  
+
   // Default to markdown if unable to determine
-  return 'markdown';
+  return "markdown";
 };
 
 async function main() {
-  const templates = await loadAndValidateTemplates();
-
   // Parse command-line arguments
   const argv = yargs(hideBin(process.argv))
     .option("file", {
@@ -36,6 +34,12 @@ async function main() {
       description: "Path to the file to lint",
       type: "string",
       demandOption: true,
+    })
+    .option("template-path", {
+      alias: "p",
+      description: "Path to the file containing the templates",
+      type: "string",
+      default: "./templates.yaml",
     })
     .option("template", {
       alias: "t",
@@ -51,25 +55,29 @@ async function main() {
     .help()
     .alias("help", "h").argv;
 
+  const templates = await loadAndValidateTemplates(argv.templatePath);
+
   // Read and lint the file
   const fileContent = readFileSync(argv.file, "utf8");
   const fileType = inferFileType(argv.file, fileContent);
-  
+
   let structure;
   if (fileType === "markdown") {
     structure = parseMarkdown(fileContent);
   } else if (fileType === "asciidoc") {
     structure = parseAsciiDoc(fileContent);
   } else {
-    throw new Error(`Unsupported file type: ${fileType}`);
+    console.error(`Unsupported file type: ${fileType}`);
+    process.exit(1);
   }
-  
+
   const template = templates[argv.template];
-  
+
   if (!template) {
-    throw new Error(`Template "${argv.template}" not found`);
+    console.error(`Template "${argv.template}" not found`);
+    process.exit(1);
   }
-  
+
   const errors = validateStructure(structure, template);
 
   if (argv.json) {
@@ -83,7 +91,11 @@ async function main() {
     // Output results in text format
     if (errors.length > 0) {
       console.log("Structure violations found:");
-      errors.forEach((error) => console.log(`- [${error.type}] ${error.heading} (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`));
+      errors.forEach((error) =>
+        console.log(
+          `- [${error.type}] ${error.heading} (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`
+        )
+      );
       process.exit(1);
     } else {
       console.log("No structure violations found.");
