@@ -32,7 +32,7 @@ export function validateSequence(structure, template) {
     errors.push({
       type: "sequence_order_error",
       head: structure.heading.content,
-      message: `Expected ${JSON.stringify(templateItemTypes)} but found ${JSON.stringify(structureItemTypes)}`,
+      message: `Expected sequence ${JSON.stringify(templateItemTypes)}, but found sequence ${JSON.stringify(structureItemTypes)}`,
       position: structure.position,
     });
     return errors;
