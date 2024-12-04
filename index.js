@@ -5,9 +5,9 @@ import path from "path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import { loadAndValidateTemplates } from "./src/templateLoader.js";
-import { parseMarkdown } from "./src/markdownParser.js";
-import { parseAsciiDoc } from "./src/asciidocParser.js";
-import { validateStructure } from "./src/structureValidator.js";
+import { parseMarkdown } from "./src/parsers/markdown.js";
+import { parseAsciiDoc } from "./src/parsers/asciidoc.js";
+import { validateStructure } from "./src/rules/structureValidator.js";
 
 const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
@@ -122,7 +122,7 @@ async function main() {
 }
 
 // Only run main() if this file is being executed directly
-if (process.argv[1].endsWith('doc-structure-lint')) {
+if (process.argv[1].endsWith('doc-structure-lint') || process.argv[1].endsWith('doc-structure-lint/index.js') || process.argv[1].endsWith('doc-structure-lint\\index.js')) {
   main().catch((error) => {
     console.error("An error occurred:", error);
     process.exit(1);

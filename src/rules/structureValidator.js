@@ -1,9 +1,9 @@
-import { validateHeading } from "./rules/headingValidator.js";
-import { validateParagraphs } from "./rules/paragraphsValidator.js";
-import { validateCodeBlocks } from "./rules/codeBlocksValidator.js";
-import { validateLists } from "./rules/listValidator.js";
-import { validateSequence } from "./rules/sequenceValidator.js";
-import { ValidationError } from "./rules/ValidationError.js";
+import { validateHeading } from "./headingValidator.js";
+import { validateParagraphs } from "./paragraphsValidator.js";
+import { validateCodeBlocks } from "./codeBlocksValidator.js";
+import { validateLists } from "./listValidator.js";
+import { validateSequence } from "./sequenceValidator.js";
+import { ValidationError } from "./ValidationError.js";
 
 export { validateStructure, validateSection };
 
