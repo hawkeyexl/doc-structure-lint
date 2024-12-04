@@ -39,7 +39,7 @@ templates: # Array of templates, each with a unique key
         description: A template for how-to guides that include prerequisites, setup, usage, troubleshooting, and next steps sections.
         sequence:
           - paragraphs:
-              min: 3
+              min: 2
         paragraphs:
           min: 2
           max: 5
