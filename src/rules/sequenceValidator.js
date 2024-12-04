@@ -20,11 +20,11 @@ export function validateSequence(structure, template) {
   // Check sequence order
   const templateItemTypes = template.sequence.map(item => Object.keys(item)[0]);
   const structureItemTypes = structure.content.map(item => {
-    if (item.hasOwnProperty("paragraphs")) {
+    if (Object.hasOwn(item, "paragraphs")) {
       return "paragraphs";
-    } else if (item.hasOwnProperty("code_blocks")) {
+    } else if (Object.hasOwn(item, "code_blocks")) {
       return "code_blocks";
-    } else if (item.hasOwnProperty("lists")) {
+    } else if (Object.hasOwn(item, "lists")) {
       return "lists";
     }
   });
