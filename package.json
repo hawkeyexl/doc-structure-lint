@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "chai": "^5.1.2",
+    "husky": "^9.1.7",
     "mocha": "^11.0.1",
     "sinon": "^19.0.2"
   },
