@@ -3,7 +3,7 @@
   "version": "0.0.2",
   "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
-    "markdown-structure-lint": "index.js"
+    "doc-structure-lint": "index.js"
   },
   "main": "index.js",
   "scripts": {
@@ -27,5 +27,12 @@
     "chai": "^5.1.2",
     "mocha": "^11.0.1",
     "sinon": "^19.0.2"
+  },
+  "files": [
+    "index.js",
+    "src/**/*.js"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
