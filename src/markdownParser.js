@@ -50,7 +50,8 @@ export function parseMarkdown(content) {
       Object.hasOwn(section.content[section.content.length - 1], type)
     ) {
       section.content[section.content.length - 1][type].push(node);
-      section.content[section.content.length - 1].position.end = node.position.end;
+      section.content[section.content.length - 1].position.end =
+        node.position.end;
     } else {
       const sequenceNode = {
         heading: section.heading,
@@ -125,7 +126,29 @@ export function parseMarkdown(content) {
     return result;
   };
 
+  const createDefaultSection = (node) => {
+    return {
+      id: uuid(),
+      position: node.position,
+      content: [],
+      heading: {
+        level: 0,
+        position: null,
+        content: null,
+      },
+      paragraphs: [],
+      codeBlocks: [],
+      lists: [],
+      sections: [],
+    };
+  };
+
   const processNode = (node, parentSection) => {
+    if (!currentSection && node.type !== "yaml" && node.type !== "heading") {
+      currentSection = createDefaultSection(node);
+      result.sections.push(currentSection);
+    }
+
     if (node.type === "yaml") {
       const items = node.value
         .trim()
