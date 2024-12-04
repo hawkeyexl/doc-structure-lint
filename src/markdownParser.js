@@ -47,7 +47,7 @@ export function parseMarkdown(content) {
   const addToSequence = (section, type, node) => {
     if (
       section.content.length > 0 &&
-      section.content[section.content.length - 1].hasOwnProperty(type)
+      Object.hasOwn(section.content[section.content.length - 1], type)
     ) {
       section.content[section.content.length - 1][type].push(node);
       section.content[section.content.length - 1].position.end = node.position.end;
