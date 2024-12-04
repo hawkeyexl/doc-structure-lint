@@ -1,6 +1,6 @@
 {
   "name": "doc-structure-lint",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
     "doc-structure-lint": "index.js"
