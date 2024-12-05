@@ -39,7 +39,11 @@ const inferFileType = (filePath, content) => {
  * @throws {Error} If the file type is unsupported or the template is not found.
  */
 export async function lintDocument({ file, templatePath, template }) {
+  try {
   const templates = await loadAndValidateTemplates(templatePath);
+  } catch (error) {
+    throw new Error(`Failed to load and validate templates: ${error.message}`);
+  }
   const fileContent = readFileSync(file, "utf8");
   const fileType = inferFileType(file, fileContent);
 

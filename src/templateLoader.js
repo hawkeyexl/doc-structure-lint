@@ -8,17 +8,6 @@ import { schema } from "./schema.js";
 const ajv = new Ajv({ useDefaults: true });
 
 /**
- * Handles fatal errors by logging the error message and exiting the process.
- *
- * @param {string} message - The error message to be logged.
- * @param {Error} error - The error object containing the error details.
- */
-function handleFatalError(message, error) {
-  console.error(`${message}: ${error.message}`);
-  process.exit(1);
-}
-
-/**
  * Parses a template file from the given file path.
  *
  * @param {string} filePath - The path to the template file.
@@ -30,13 +19,13 @@ function parseTemplateFile(filePath) {
     return parse(readFileSync(filePath, "utf8"));
   } catch (error) {
     if (error.code === "ENOENT") {
-      handleFatalError(`Template file not found: ${filePath}`, error);
+      throw Error(`Template file not found: ${filePath}`, error);
     } else if (error.name === "YAMLException") {
-      handleFatalError("Invalid YAML in template file", error);
+      throw Error("Invalid YAML in template file", error);
     } else if (error.name === "SyntaxError") {
-      handleFatalError("Invalid JSON in template file", error);
+      throw Error("Invalid JSON in template file", error);
     }
-    handleFatalError("Error reading template file", error);
+    throw Error("Error reading template file", error);
   }
 }
 
@@ -54,7 +43,7 @@ async function dereferenceTemplates(templateDescriptions) {
   try {
     return await dereference(templateDescriptions);
   } catch (error) {
-    handleFatalError("Failed to dereference template schemas", error);
+    throw Error("Failed to dereference template schemas", error);
   }
 }
 
@@ -72,8 +61,7 @@ function validateTemplates(templateDescriptions) {
   for (const templateName in templateDescriptions.templates) {
     const template = { [templateName]: templateDescriptions.templates[templateName] };
     if (!validateTemplate(template)) {
-      console.error(JSON.stringify(template));
-      handleFatalError("Template is invalid", { message: JSON.stringify(validateTemplate.errors) });
+      throw Error("Template is invalid", { message: JSON.stringify(validateTemplate.errors) });
     }
   }
   
