@@ -117,7 +117,7 @@ async function main() {
         );
         process.exit(1);
       } else {
-        console.log("No structure violations found.");
+        console.log("Validation successful! 🎉");
       }
     }
   } catch (error) {
