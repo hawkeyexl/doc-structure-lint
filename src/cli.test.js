@@ -86,4 +86,29 @@ templates:
             expect(error.stderr).to.include("Options");
         }
     }).timeout(5000);
+
+    it("should handle invalid template path gracefully", async () => {
+        try {
+            await execAsync(
+                `npx . --file="${documentFile}" --template-path="non-existent.yaml" --template="test-template"`
+            );
+            expect.fail("Should have thrown an error");
+        } catch (error) {
+            expect(error.stderr).to.include("Template file not found");
+            expect(error.code).to.equal(1);
+        }
+    }).timeout(5000);
+
+    it("should handle malformed template file", async () => {
+        fs.writeFileSync(templateFile, "invalid: yaml: content:");
+        try {
+            await execAsync(
+                `npx . --file="${documentFile}" --template-path="${templateFile}" --template="test-template"`
+            );
+            expect.fail("Should have thrown an error");
+        } catch (error) {
+            expect(error.stderr).to.include("Failed to load and validate templates");
+            expect(error.code).to.equal(1);
+        }
+    }).timeout(5000);
 });
