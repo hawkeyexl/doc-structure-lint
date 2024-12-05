@@ -41,7 +41,8 @@ function checkHeadingConst(section, template) {
 function checkHeadingPattern(section, template) {
   if (!template.heading?.pattern) return null;
 
-  if (!template.heading.pattern.test(section.heading.content)) {
+  const pattern = new RegExp(template.heading.pattern);
+  if (!pattern.test(section.heading.content)) {
     return new ValidationError(
       "heading_pattern_error",
       section.heading.content,

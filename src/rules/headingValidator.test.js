@@ -21,11 +21,11 @@ describe("validateHeading", () => {
 
     it("should return a ValidationError if heading does not match the pattern", () => {
         const section = { heading: { content: "Invalid Heading" }, position: {} };
-        const template = { heading: { pattern: /^Valid Heading$/ } };
+        const template = { heading: { pattern: "^Valid Heading$" } };
         const result = validateHeading(section, template);
         expect(result).to.have.lengthOf(1);
         expect(result[0]).to.be.instanceOf(ValidationError);
-        expect(result[0].message).to.equal('Title "Invalid Heading" doesn\'t match pattern "/^Valid Heading$/"');
+        expect(result[0].message).to.equal('Title "Invalid Heading" doesn\'t match pattern "^Valid Heading$"');
     });
 
     it("should return multiple ValidationErrors if heading does not match both constant and pattern", () => {

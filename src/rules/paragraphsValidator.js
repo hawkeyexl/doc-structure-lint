@@ -55,7 +55,8 @@ function validateParagraphPatterns(section, patterns) {
 
   section.paragraphs.forEach((paragraph, index) => {
     const pattern = patterns[index % patterns.length];
-    if (pattern && !pattern.test(paragraph.content)) {
+    const regex = new RegExp(pattern);
+    if (pattern && !regex.test(paragraph.content)) {
       errors.push(
         new ValidationError(
           "paragraph_pattern_error",
