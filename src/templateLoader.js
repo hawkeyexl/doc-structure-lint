@@ -19,13 +19,13 @@ function parseTemplateFile(filePath) {
     return parse(readFileSync(filePath, "utf8"));
   } catch (error) {
     if (error.code === "ENOENT") {
-      throw Error(`Template file not found: ${filePath}`, error);
+      throw new Error(`Template file not found: ${filePath}`, {message: error});
     } else if (error.name === "YAMLException") {
-      throw Error("Invalid YAML in template file", error);
+      throw new Error("Invalid YAML in template file", {message: error});
     } else if (error.name === "SyntaxError") {
-      throw Error("Invalid JSON in template file", error);
+      throw new Error("Invalid JSON in template file", {message: error});
     }
-    throw Error("Error reading template file", error);
+    throw new Error("Error reading template file", {message: error});
   }
 }
 
@@ -43,7 +43,7 @@ async function dereferenceTemplates(templateDescriptions) {
   try {
     return await dereference(templateDescriptions);
   } catch (error) {
-    throw Error("Failed to dereference template schemas", error);
+    throw new Error("Failed to dereference template schemas", {message: error});
   }
 }
 
@@ -61,7 +61,7 @@ function validateTemplates(templateDescriptions) {
   for (const templateName in templateDescriptions.templates) {
     const template = { [templateName]: templateDescriptions.templates[templateName] };
     if (!validateTemplate(template)) {
-      throw Error("Template is invalid", { message: JSON.stringify(validateTemplate.errors) });
+      throw new Error("Template is invalid", { message: JSON.stringify(validateTemplate.errors) });
     }
   }
   
