@@ -4,10 +4,10 @@ import { readFileSync } from "fs";
 import path from "path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { loadAndValidateTemplates } from "./src/templateLoader.js";
-import { parseMarkdown } from "./src/parsers/markdown.js";
-import { parseAsciiDoc } from "./src/parsers/asciidoc.js";
-import { validateStructure } from "./src/rules/structureValidator.js";
+import { loadAndValidateTemplates } from "./templateLoader.js";
+import { parseMarkdown } from "./parsers/markdown.js";
+import { parseAsciiDoc } from "./parsers/asciidoc.js";
+import { validateStructure } from "./rules/structureValidator.js";
 
 const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
@@ -39,8 +39,9 @@ const inferFileType = (filePath, content) => {
  * @throws {Error} If the file type is unsupported or the template is not found.
  */
 export async function lintDocument({ file, templatePath, template }) {
+  let templates;
   try {
-  const templates = await loadAndValidateTemplates(templatePath);
+    templates = await loadAndValidateTemplates(templatePath);
   } catch (error) {
     throw new Error(`Failed to load and validate templates: ${error.message}`);
   }
@@ -126,7 +127,11 @@ async function main() {
 }
 
 // Only run main() if this file is being executed directly
-if (process.argv[1].endsWith('doc-structure-lint') || process.argv[1].endsWith('doc-structure-lint/index.js') || process.argv[1].endsWith('doc-structure-lint\\index.js')) {
+if (
+  process.argv[1].endsWith("doc-structure-lint") ||
+  process.argv[1].endsWith("doc-structure-lint/src/index.js") ||
+  process.argv[1].endsWith("doc-structure-lint\\src\\index.js")
+) {
   main().catch((error) => {
     console.error("An error occurred:", error);
     process.exit(1);
