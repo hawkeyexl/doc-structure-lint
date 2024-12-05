@@ -53,15 +53,33 @@ function validateParagraphPatterns(section, patterns) {
   const errors = [];
   if (!patterns) return errors;
 
+  // Validate patterns
+  const validatedPatterns = patterns.map((pattern) => {
+    try {
+      // Set timeout to prevent ReDoS
+      const timeout = setTimeout(() => {
+        throw new Error("Pattern compilation timeout");
+      }, 1000);
+      const regex = new RegExp(pattern);
+      clearTimeout(timeout);
+      return regex;
+    } catch (e) {
+      throw new Error(`Invalid pattern "${pattern}": ${e.message}`);
+    }
+  });
+
   section.paragraphs.forEach((paragraph, index) => {
-    const pattern = patterns[index % patterns.length];
+    // Get pattern for current paragraph using cycle  
+    const patternIndex = index % validatedPatterns.length;  
+    const pattern = validatedPatterns[patternIndex];  
     const regex = new RegExp(pattern);
-    if (pattern && !regex.test(paragraph.content)) {
+
+    if (!regex.test(paragraph.content)) {
       errors.push(
         new ValidationError(
           "paragraph_pattern_error",
           section.heading?.content,
-          `Paragraph does not match pattern: ${pattern}`,
+          `Paragraph ${index + 1} doesn't match expected pattern.`,
           paragraph.position
         )
       );

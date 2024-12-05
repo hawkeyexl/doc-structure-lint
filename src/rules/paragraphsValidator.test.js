@@ -48,7 +48,7 @@ describe("validateParagraphs", () => {
         const errors = validateParagraphs(section, template);
         expect(errors).to.have.lengthOf(1);
         expect(errors[0]).to.be.instanceOf(ValidationError);
-        expect(errors[0].message).to.equal("Paragraph does not match pattern: ^Paragraph \\d+$");
+        expect(errors[0].message).to.include("doesn't match expected pattern");
     });
 
     it("should return multiple errors if multiple validation rules are violated", () => {
