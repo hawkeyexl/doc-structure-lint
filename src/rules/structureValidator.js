@@ -5,6 +5,15 @@ import { validateLists } from "./listValidator.js";
 import { validateSequence } from "./sequenceValidator.js";
 import { validateSubsections } from "./subsectionValidator.js";
 
+/**
+ * Validates the structure of a given document against a template.
+ *
+ * @param {Object} structure - The structure of the document to be validated.
+ * @param {Object} template - The template to validate the document against.
+ * @param {Object} template.sections - The sections defined in the template.
+ * @param {Object} structure.sections - The sections defined in the document structure.
+ * @returns {Array} An array of error messages, if any.
+ */
 export function validateStructure(structure, template) {
   let errors = [];
 
@@ -26,6 +35,13 @@ export function validateStructure(structure, template) {
   return errors;
 }
 
+/**
+ * Validates a structure section against a template section.
+ *
+ * @param {Object} structureSection - The structure section to validate.
+ * @param {Object} templateSection - The template section to validate against.
+ * @returns {Array} An array of error messages, if any.
+ */
 export function validateSection(structureSection, templateSection) {
   let errors = [];
 
