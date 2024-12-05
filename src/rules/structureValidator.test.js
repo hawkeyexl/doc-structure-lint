@@ -129,7 +129,7 @@ describe("validateSection", () => {
       },
     };
     const result = validateSection(structureSection, templateSection);
-    expect(result).to.be.an("array").to.be.empty;
+    expect(result).to.be.an("array").that.is.empty;
   });
 
   it("should accumulate all validation errors", () => {
