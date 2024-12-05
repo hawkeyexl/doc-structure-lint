@@ -25,13 +25,13 @@ describe("validateLists", () => {
   });
 
   it("should return an empty array if template.lists is not defined", () => {
-    delete template.lists;
+    template.lists = undefined;
     const result = validateLists(section, template);
     expect(result).to.be.an("array").that.is.empty;
   });
 
   it("should return an empty array if section.lists is not defined", () => {
-    delete section.lists;
+    section.lists = undefined;
     const result = validateLists(section, template);
     expect(result).to.be.an("array").that.is.empty;
   });
