@@ -13,14 +13,14 @@ const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
   if ([".md", ".markdown"].includes(extension)) {
     return "markdown";
-  } else if ([".adoc", ".asciidoc"].includes(extension)) {
-    return "asciidoc";
+  // } else if ([".adoc", ".asciidoc"].includes(extension)) {
+  //   return "asciidoc";
   }
 
   // If extension is not conclusive, check content
-  if (content.trim().startsWith("= ")) {
-    return "asciidoc";
-  }
+  // if (content.trim().startsWith("= ")) {
+  //   return "asciidoc";
+  // }
 
   // Default to markdown if unable to determine
   return "markdown";
@@ -51,8 +51,8 @@ export async function lintDocument({ file, templatePath, template }) {
   let structure;
   if (fileType === "markdown") {
     structure = parseMarkdown(fileContent);
-  } else if (fileType === "asciidoc") {
-    structure = parseAsciiDoc(fileContent);
+  // } else if (fileType === "asciidoc") {
+  //   structure = parseAsciiDoc(fileContent);
   } else {
     throw new Error(`Unsupported file type: ${fileType}`);
   }
