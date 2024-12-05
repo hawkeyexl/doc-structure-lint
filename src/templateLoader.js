@@ -7,44 +7,75 @@ import { schema } from "./schema.js";
 
 const ajv = new Ajv({ useDefaults: true });
 
-export async function loadAndValidateTemplates(templatesFilePath) {
-  let templateDescriptions;
-
+/**
+ * Parses a template file from the given file path.
+ *
+ * @param {string} filePath - The path to the template file.
+ * @returns {Object} The parsed content of the template file.
+ * @throws Will throw an error if the file cannot be read or if the content is invalid.
+ */
+function parseTemplateFile(filePath) {
   try {
-    templateDescriptions = parse(readFileSync(templatesFilePath, "utf8"));
+    return parse(readFileSync(filePath, "utf8"));
   } catch (error) {
     if (error.code === "ENOENT") {
-      console.error(`Template file not found: ${templatesFilePath}`);
-      process.exit(1);
+      throw new Error(`Template file not found: ${filePath}`, {message: error});
     } else if (error.name === "YAMLException") {
-      console.error(`Invalid YAML in template file: ${error.message}`);
-      process.exit(1);
+      throw new Error("Invalid YAML in template file", {message: error});
     } else if (error.name === "SyntaxError") {
-      console.error(`Invalid JSON in template file: ${error.message}`);
-      process.exit(1);
+      throw new Error("Invalid JSON in template file", {message: error});
     }
-    console.error(`Error reading template file: ${error.message}`);
-    process.exit(1);
+    throw new Error("Error reading template file", {message: error});
   }
+}
 
+/**
+ * Dereferences the provided template descriptions.
+ *
+ * This function attempts to dereference the given template descriptions using the `dereference` function.
+ * If an error occurs during the dereferencing process, it handles the error by calling `handleFatalError`.
+ *
+ * @param {Object} templateDescriptions - The template descriptions to be dereferenced.
+ * @returns {Promise<Object>} A promise that resolves to the dereferenced template descriptions.
+ * @throws Will throw an error if the dereferencing process fails.
+ */
+async function dereferenceTemplates(templateDescriptions) {
   try {
-    templateDescriptions = await dereference(templateDescriptions);
+    return await dereference(templateDescriptions);
   } catch (error) {
-    console.error(`Failed to dereference template schemas: ${error.message}`);
-    process.exit(1);
+    throw new Error("Failed to dereference template schemas", {message: error});
   }
+}
 
+/**
+ * Validates the provided template descriptions against a predefined schema.
+ *
+ * @param {Object} templateDescriptions - An object containing the templates to be validated.
+ * @param {Object} templateDescriptions.templates - The templates to be validated.
+ * @throws Will throw an error if a template is invalid.
+ * @returns {Object} The validated templates.
+ */
+function validateTemplates(templateDescriptions) {
   const validateTemplate = ajv.compile(schema);
 
   for (const templateName in templateDescriptions.templates) {
-    const template = {};
-    template[templateName] = templateDescriptions.templates[templateName];
+    const template = { [templateName]: templateDescriptions.templates[templateName] };
     if (!validateTemplate(template)) {
-      console.error(JSON.stringify(template));
-      console.error(`Template is invalid:`, validateTemplate.errors);
-      process.exit(1);
+      throw new Error("Template is invalid", { message: JSON.stringify(validateTemplate.errors) });
     }
   }
-
+  
   return templateDescriptions.templates;
+}
+
+/**
+ * Loads and validates templates from the specified file path.
+ *
+ * @param {string} templatesFilePath - The path to the templates file.
+ * @returns {Promise<Object>} A promise that resolves to the validated templates.
+ */
+export async function loadAndValidateTemplates(templatesFilePath) {
+  const rawTemplates = parseTemplateFile(templatesFilePath);
+  const dereferencedTemplates = await dereferenceTemplates(rawTemplates);
+  return validateTemplates(dereferencedTemplates);
 }

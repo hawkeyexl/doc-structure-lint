@@ -2,7 +2,7 @@ export const schema = {
   type: "object",
   additionalProperties: false,
   patternProperties: {
-    "^[A-Za-z-_]+$": {
+    "^[A-Za-z0-9-_]+$": {
       type: "object",
       additionalProperties: false,
       properties: {
@@ -10,7 +10,7 @@ export const schema = {
           type: "object",
           additionalProperties: false,
           patternProperties: {
-            "^[A-Za-z-_]+$": {
+            "^[A-Za-z0-9-_]+$": {
               $ref: "#/definitions/section",
             },
           },
@@ -186,7 +186,7 @@ export const schema = {
           description: "Object of subsections",
           type: "object",
           patternProperties: {
-            "^[A-Za-z-_]+": {
+            "^[A-Za-z0-9-_]+$": {
               anyOf: [{ $ref: "#/definitions/section" }],
             },
           },

@@ -4,23 +4,23 @@ import { readFileSync } from "fs";
 import path from "path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { loadAndValidateTemplates } from "./src/templateLoader.js";
-import { parseMarkdown } from "./src/markdownParser.js";
-import { parseAsciiDoc } from "./src/asciidocParser.js";
-import { validateStructure } from "./src/structureValidator.js";
+import { loadAndValidateTemplates } from "./templateLoader.js";
+import { parseMarkdown } from "./parsers/markdown.js";
+import { parseAsciiDoc } from "./parsers/asciidoc.js";
+import { validateStructure } from "./rules/structureValidator.js";
 
 const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
   if ([".md", ".markdown"].includes(extension)) {
     return "markdown";
-  } else if ([".adoc", ".asciidoc"].includes(extension)) {
-    return "asciidoc";
+  // } else if ([".adoc", ".asciidoc"].includes(extension)) {
+  //   return "asciidoc";
   }
 
   // If extension is not conclusive, check content
-  if (content.trim().startsWith("= ")) {
-    return "asciidoc";
-  }
+  // if (content.trim().startsWith("= ")) {
+  //   return "asciidoc";
+  // }
 
   // Default to markdown if unable to determine
   return "markdown";
@@ -39,15 +39,20 @@ const inferFileType = (filePath, content) => {
  * @throws {Error} If the file type is unsupported or the template is not found.
  */
 export async function lintDocument({ file, templatePath, template }) {
-  const templates = await loadAndValidateTemplates(templatePath);
+  let templates;
+  try {
+    templates = await loadAndValidateTemplates(templatePath);
+  } catch (error) {
+    throw new Error(`Failed to load and validate templates: ${error.message}`);
+  }
   const fileContent = readFileSync(file, "utf8");
   const fileType = inferFileType(file, fileContent);
 
   let structure;
   if (fileType === "markdown") {
     structure = parseMarkdown(fileContent);
-  } else if (fileType === "asciidoc") {
-    structure = parseAsciiDoc(fileContent);
+  // } else if (fileType === "asciidoc") {
+  //   structure = parseAsciiDoc(fileContent);
   } else {
     throw new Error(`Unsupported file type: ${fileType}`);
   }
@@ -112,7 +117,7 @@ async function main() {
         );
         process.exit(1);
       } else {
-        console.log("No structure violations found.");
+        console.log("Validation successful! 🎉");
       }
     }
   } catch (error) {
@@ -122,7 +127,11 @@ async function main() {
 }
 
 // Only run main() if this file is being executed directly
-if (process.argv[1].endsWith('doc-structure-lint')) {
+if (
+  process.argv[1].endsWith("doc-structure-lint") ||
+  process.argv[1].endsWith("doc-structure-lint/src/index.js") ||
+  process.argv[1].endsWith("doc-structure-lint\\src\\index.js")
+) {
   main().catch((error) => {
     console.error("An error occurred:", error);
     process.exit(1);

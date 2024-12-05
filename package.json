@@ -3,12 +3,13 @@
   "version": "0.0.3",
   "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
-    "doc-structure-lint": "index.js"
+    "doc-structure-lint": "src/index.js"
   },
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "mocha 'src/**/*.test.js' 'test/**/*.test.js'"
+    "start": "node src/index.js",
+    "test": "mocha 'src/**/*.test.js'",
+    "prepare": "husky"
   },
   "author": "Manny Silva",
   "license": "MIT",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "chai": "^5.1.2",
+    "husky": "^9.1.7",
     "mocha": "^11.0.1",
     "sinon": "^19.0.2"
   },

@@ -1,51 +1,118 @@
 import { ValidationError } from "./ValidationError.js";
 
+/**
+ * Validates that a section contains at least a minimum number of paragraphs.
+ *
+ * @param {Object} section - The section to validate.
+ * @param {number} minCount - The minimum number of paragraphs required.
+ * @returns {ValidationError|null} - Returns a ValidationError if the section has fewer paragraphs than the minimum count, otherwise returns null.
+ */
+function validateMinParagraphs(section, minCount) {
+  if (minCount && section.paragraphs.length < minCount) {
+    return new ValidationError(
+      "paragraphs_count_error",
+      section.heading?.content,
+      `Expected at least ${minCount} paragraphs, but found ${section.paragraphs.length}`,
+      section.position
+    );
+  }
+  return null;
+}
+
+/**
+ * Validates the number of paragraphs in a section against a maximum count.
+ *
+ * @param {Object} section - The section to validate.
+ * @param {Array} section.paragraphs - The paragraphs in the section.
+ * @param {Object} section.heading - The heading of the section.
+ * @param {string} section.heading.content - The content of the heading.
+ * @param {Object} section.position - The position of the section in the document.
+ * @param {number} maxCount - The maximum allowed number of paragraphs.
+ * @returns {ValidationError|null} - Returns a ValidationError if the number of paragraphs exceeds the maximum count, otherwise returns null.
+ */
+function validateMaxParagraphs(section, maxCount) {
+  if (maxCount && section.paragraphs.length > maxCount) {
+    return new ValidationError(
+      "paragraphs_count_error",
+      section.heading?.content,
+      `Expected at most ${maxCount} paragraphs, but found ${section.paragraphs.length}`,
+      section.position
+    );
+  }
+  return null;
+}
+
+/**
+ * Validates the paragraphs in a section against a set of patterns.
+ *
+ * @param {Object} section - The section containing paragraphs to validate.
+ * @param {Array<RegExp>} patterns - An array of regular expression patterns to validate paragraphs against.
+ * @returns {Array<ValidationError>} An array of validation errors, if any.
+ */
+function validateParagraphPatterns(section, patterns) {
+  const errors = [];
+  if (!patterns) return errors;
+
+  // Validate patterns
+  const validatedPatterns = patterns.map((pattern) => {
+    try {
+      // Set timeout to prevent ReDoS
+      const timeout = setTimeout(() => {
+        throw new Error("Pattern compilation timeout");
+      }, 1000);
+      const regex = new RegExp(pattern);
+      clearTimeout(timeout);
+      return regex;
+    } catch (e) {
+      throw new Error(`Invalid pattern "${pattern}": ${e.message}`);
+    }
+  });
+
+  section.paragraphs.forEach((paragraph, index) => {
+    // Get pattern for current paragraph using cycle  
+    const patternIndex = index % validatedPatterns.length;  
+    const pattern = validatedPatterns[patternIndex];  
+    const regex = new RegExp(pattern);
+
+    if (!regex.test(paragraph.content)) {
+      errors.push(
+        new ValidationError(
+          "paragraph_pattern_error",
+          section.heading?.content,
+          `Paragraph ${index + 1} doesn't match expected pattern.`,
+          paragraph.position
+        )
+      );
+    }
+  });
+
+  return errors;
+}
+
+/**
+ * Validates the paragraphs of a given section against a template.
+ *
+ * @param {Object} section - The section to validate.
+ * @param {Object} template - The template containing paragraph validation rules.
+ * @param {Object} template.paragraphs - The paragraph validation rules.
+ * @param {number} [template.paragraphs.min] - The minimum number of paragraphs required.
+ * @param {number} [template.paragraphs.max] - The maximum number of paragraphs allowed.
+ * @param {Array<RegExp>} [template.paragraphs.patterns] - An array of regular expressions to validate paragraph patterns.
+ * @returns {Array<string>} An array of error messages, if any.
+ */
 export function validateParagraphs(section, template) {
   const errors = [];
 
   if (template.paragraphs) {
-    // Max
-    if (
-      template.paragraphs.min &&
-      section.paragraphs.length < template.paragraphs.min
-    ) {
-      errors.push(new ValidationError(
-        "paragraphs_count_error",
-        section.heading?.content,
-        `Expected at least ${template.paragraphs.min} paragraphs, but found ${section.paragraphs.length}`,
-        section.position
-      ));
-    }
+    const minError = validateMinParagraphs(section, template.paragraphs.min);
+    if (minError) errors.push(minError);
 
-    // Min
-    if (
-      template.paragraphs.max &&
-      section.paragraphs.length > template.paragraphs.max
-    ) {
-      errors.push(new ValidationError(
-        "paragraphs_count_error",
-        section.heading?.content,
-        `Expected at most ${template.paragraphs.max} paragraphs, but found ${section.paragraphs.length}`,
-        section.position
-      ));
-    }
+    const maxError = validateMaxParagraphs(section, template.paragraphs.max);
+    if (maxError) errors.push(maxError);
 
-    // Patterns
-    if (template.paragraphs.patterns) {
-      const patterns = template.paragraphs.patterns;
-      const patternCount = patterns.length;
-      const paragraphCount = section.paragraphs.length;
-      for (let i = 0; i < paragraphCount; i++) {
-        const paragraph = section.paragraphs[i];
-        if (patterns[i % patternCount] && !patterns[i % patternCount].test(paragraph.content)) {
-          errors.push({
-            head: section.heading.content,
-            position: paragraph.position,
-            message: `Paragraph does not match pattern: ${patterns[i % patternCount]}`,
-          });
-        }
-      }
-    }
+    errors.push(
+      ...validateParagraphPatterns(section, template.paragraphs.patterns)
+    );
   }
 
   return errors;

@@ -1,4 +1,4 @@
-import { lintDocument } from '../../index.js';
+import { lintDocument } from '../src/index.js';
 
 const result = await lintDocument({
   file: './test/artifacts/sample_markdown.md',
