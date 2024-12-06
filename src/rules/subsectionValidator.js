@@ -76,7 +76,7 @@ function checkSubsectionCount(structureSection, templateSection) {
  * @param {Object} structureSection.position - The position of the structure section.
  * @returns {Array} An array of ValidationError objects if there are validation errors, otherwise an empty array.
  */
-function validateAdditionalSections(structureSection, templateSection) {
+async function validateAdditionalSections(structureSection, templateSection) {
   const errors = [];
   const sectionMap = {};
 
@@ -88,13 +88,14 @@ function validateAdditionalSections(structureSection, templateSection) {
     // Iterate through each subsection in the structure section
     for (let k = 0; k < structureSection.sections.length; k++) {
       // Validate the current subsection against the template subsection
+      const structureSubsection = structureSection.sections[k];
+      const sectionErrors = await validateSection(structureSubsection, templateSubsection);
       if (
-        validateSection(structureSection.sections[k], templateSubsection)
-          .length === 0
+        sectionErrors.length === 0
       ) {
         // If the subsection is valid, add it to the section map
-        if (!sectionMap[j]) sectionMap[j] = [];
-        sectionMap[j].push(k);
+        if (!sectionMap[templateKey]) sectionMap[templateKey] = [];
+        sectionMap[templateKey].push(k);
         sectionFound = true;
       }
     }
@@ -121,14 +122,14 @@ function validateAdditionalSections(structureSection, templateSection) {
  * @param {Object} templateSection - The section of the template to validate against.
  * @returns {Array} An array of error messages, if any.
  */
-function validateRequiredSubsections(structureSection, templateSection) {
+async function validateRequiredSubsections(structureSection, templateSection) {
   const errors = [];
 
   for (let i = 0; i < structureSection.sections.length; i++) {
     const structureSubsection = structureSection.sections[i];
     const templateSubsection =
       templateSection.sections[Object.keys(templateSection.sections)[i]];
-    errors.push(...validateSection(structureSubsection, templateSubsection));
+    errors.push(...await validateSection(structureSubsection, templateSubsection));
   }
 
   return errors;
@@ -141,7 +142,7 @@ function validateRequiredSubsections(structureSection, templateSection) {
  * @param {Object} templateSection - The template section to validate against.
  * @returns {Array} An array of error messages, if any.
  */
-export function validateSubsections(structureSection, templateSection) {
+export async function validateSubsections(structureSection, templateSection) {
   const errors = [];
   if (!templateSection.sections) return errors;
 
@@ -166,11 +167,11 @@ export function validateSubsections(structureSection, templateSection) {
     templateSection.additionalSections
   ) {
     errors.push(
-      ...validateAdditionalSections(structureSection, templateSection)
+      ...await validateAdditionalSections(structureSection, templateSection)
     );
   } else {
     errors.push(
-      ...validateRequiredSubsections(structureSection, templateSection)
+      ...await validateRequiredSubsections(structureSection, templateSection)
     );
   }
 

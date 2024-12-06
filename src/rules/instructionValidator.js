@@ -4,9 +4,7 @@ import path from "path";
 import { getLlama, LlamaChatSession, resolveModelFile } from "node-llama-cpp";
 import { ValidationError } from "./ValidationError.js";
 
-const llama = await getLlama();
-
-async function prepareModel() {
+async function prepareModel(llama) {
   // Create a temporary directory for the model
   const dir = path.join(os.tmpdir(), "doc-structure-lint", "models");
   // Recursively create the directory if it doesn't exist
@@ -35,7 +33,7 @@ async function prepareModel() {
   return model;
 }
 
-async function prepareGrammar() {
+async function prepareGrammar(llama) {
   return await llama.createGrammarForJsonSchema({
     type: "object",
     required: ["assessment"],
@@ -74,8 +72,9 @@ export async function validateInstructions(section, template) {
   const errors = [];
   if (!template.instructions) return errors;
 
-  const model = await prepareModel();
-  const grammar = await prepareGrammar();
+  const llama = await getLlama(); // TODO: Figure out how to silence the terminal output, then move to top of file
+  const model = await prepareModel(llama);
+  const grammar = await prepareGrammar(llama);
 
   for (const index in template.instructions) {
     const instruction = template.instructions[index];
@@ -99,24 +98,24 @@ export async function validateInstructions(section, template) {
   return errors;
 }
 
-(async () => {
-  const section = {
-    rawContent: "My favorite colors are red, yellow, and blue.",
-    heading: {
-      content: "Colors",
-    },
-    position: {
-      start: { offset: 0 },
-      end: { offset: 10 },
-    },
-  };
-  const template = {
-    instructions: [
-      "Mention all three primary colors.",
-      "Descibe secondary colors.",
-      "Explain the difference between primary and secondary colors.",
-    ],
-  };
-  const errors = await validateInstructions(section, template);
-  console.log(errors);
-})();
+// (async () => {
+//   const section = {
+//     rawContent: "My favorite colors are red, yellow, and blue.",
+//     heading: {
+//       content: "Colors",
+//     },
+//     position: {
+//       start: { offset: 0 },
+//       end: { offset: 10 },
+//     },
+//   };
+//   const template = {
+//     instructions: [
+//       "Mention all three primary colors.",
+//       "Descibe secondary colors.",
+//       "Explain the difference between primary and secondary colors.",
+//     ],
+//   };
+//   const errors = await validateInstructions(section, template);
+//   console.log(errors);
+// })();
