@@ -133,6 +133,13 @@ export const schema = {
           description: "Description of the section",
           type: "string",
         },
+        instructions: {
+          description: "Instructions for the author to follow when using the template. Evaluated against content by a local language model.",
+          type: "array",
+          items: {
+            type: "string",
+          },
+        },
         heading: {
           description: "Heading rules",
           type: "object",
