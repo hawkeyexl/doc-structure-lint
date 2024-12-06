@@ -4,23 +4,25 @@ info:
   version: 1.0.0
 
 templates: # Array of templates, each with a unique key
-  How-to:
+  how-to:
     sections:
-      Title:
+      title:
+        instructions:
+          - Must mention the intent of the document
         paragraphs:
           min: 1
         sections:
-          Overview:
+          overview:
             heading:
               const: Overview
             paragraphs:
               min: 1
-          Before you start:
+          before you start:
             heading:
               const: Before you start
             paragraphs:
               min: 1
-          Task:
+          task:
             paragraphs:
               min: 1
             additionalSections: true
@@ -28,11 +30,40 @@ templates: # Array of templates, each with a unique key
               Sub-task:
                 paragraphs:
                   min: 1
-          See also:
+          see also:
             heading:
               const: See also
             paragraphs:
               min: 1
+  api-operation:
+    sections:
+      overview:
+        heading:
+          const: "Overview"
+        paragraphs:
+          min: 1
+          max: 3
+      request-parameters:
+        $ref: "#/components/parameters"
+      response-parameters:
+        $ref: "#/components/parameters"
+      examples:
+        required: true
+        code_blocks:
+          min: 1
+        sections:
+          success:
+            heading:
+              const: "Success Response"
+            sequence:
+              - paragraphs:
+                  min: 1
+              - code_blocks:
+                  min: 1
+          error:
+            required: false
+            heading:
+              const: "Error Response"
   Sample: # Template definition correspondings to the H1 level of the document
     sections: # Array of sections, each with a unique key
       Introduction: # Each sections corresponds to a heading level one below the parent, starting with an H1 at the first level
@@ -86,3 +117,12 @@ components:
         min: 1
       lists:
         min: 1
+  parameters:
+    required: false
+    heading:
+      pattern: "^Parameters|Request Parameters$"
+    lists:
+      min: 1
+      items:
+        min: 1
+      
