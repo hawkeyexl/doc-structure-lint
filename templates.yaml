@@ -38,7 +38,7 @@ templates: # Array of templates, each with a unique key
       Introduction: # Each sections corresponds to a heading level one below the parent, starting with an H1 at the first level
         description: A template for how-to guides that include prerequisites, setup, usage, troubleshooting, and next steps sections.
         instructions: # Instructions for the author to follow when using the template. Evaluated against content by a local language model.
-          - Mention the purpose of the guide.
+          - Mention the intent of the guide
         sequence:
           - paragraphs:
               min: 2
