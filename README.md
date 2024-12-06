@@ -38,13 +38,13 @@ npx doc-structure-lint --file path/to/doc.md --template path/to/template.yaml
 
 ## Usage (as a package)
 
-## Installation
+### Installation
 
 ```bash
 npm install doc-structure-lint
 ```
 
-## API Usage
+### API Usage
 
 ```javascript
 import { lintDocument } from 'doc-structure-lint';
