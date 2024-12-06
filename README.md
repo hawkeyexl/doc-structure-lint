@@ -30,11 +30,18 @@ A tool to validate Markdown document structure against specified templates, ensu
 npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
 ```
 
+Doc Structure Lint uses a *local* language model to evaluate some parts of your templates and content. This model only takes about 2 GB of storage, and it's only downloaded once. When you run the tool for the first time, it may take a few minutes to download the language model. If you don't want to download the model during installation, set the `DOC_STRUCTURE_LINT_PRELOAD` environment variable to `0`. However, if you specify an `instructions` property in your template, the model will be downloaded regardless of the `DOC_STRUCTURE_LINT_PRELOAD` variable value.
+
+```bash
+export DOC_STRUCTURE_LINT_PRELOAD=0 && npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
+```
+
 ### Options
 
 - `--file-path` or `-f`: Path to the Markdown document to validate
 - `--template-path` or `-p`: Path to the YAML template file (default: `./template.yaml`)
 - `--template` or `-t`: Name of the template to use
+- `--json`: Output results in JSON format
 
 ## Usage (as a package)
 
@@ -93,10 +100,13 @@ templates:
 
 1. Clone the repository
 2. Install dependencies:
+
    ```bash
    npm install
    ```
+
 3. Run tests:
+
    ```bash
    npm test
    ```
