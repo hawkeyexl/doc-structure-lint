@@ -3,6 +3,7 @@ import { validateParagraphs } from "./paragraphsValidator.js";
 import { validateCodeBlocks } from "./codeBlocksValidator.js";
 import { validateLists } from "./listValidator.js";
 import { validateSequence } from "./sequenceValidator.js";
+import { validateInstructions } from "./instructionValidator.js";
 import { validateSubsections } from "./subsectionValidator.js";
 
 /**
@@ -14,7 +15,7 @@ import { validateSubsections } from "./subsectionValidator.js";
  * @param {Object} structure.sections - The sections defined in the document structure.
  * @returns {Array} An array of error messages, if any.
  */
-export function validateStructure(structure, template) {
+export async function validateStructure(structure, template) {
   let errors = [];
 
   // TODO: Check frontmatter
@@ -27,7 +28,7 @@ export function validateStructure(structure, template) {
       const structureSection = structure.sections[i];
 
       errors = errors.concat(
-        validateSection(structureSection, templateSection)
+        await validateSection(structureSection, templateSection)
       );
     }
   }
@@ -42,7 +43,7 @@ export function validateStructure(structure, template) {
  * @param {Object} templateSection - The template section to validate against.
  * @returns {Array} An array of error messages, if any.
  */
-export function validateSection(structureSection, templateSection) {
+export async function validateSection(structureSection, templateSection) {
   let errors = [];
 
   // Check sequence if defined
@@ -74,10 +75,17 @@ export function validateSection(structureSection, templateSection) {
     errors = errors.concat(validateLists(structureSection, templateSection));
   }
 
+  // Check instructions
+  if (templateSection.instructions) {
+    errors = errors.concat(
+      await validateInstructions(structureSection, templateSection)
+    );
+  }
+
   // Check subsections
   if (templateSection.sections) {
     errors = errors.concat(
-      validateSubsections(structureSection, templateSection)
+      await validateSubsections(structureSection, templateSection)
     );
   }
 

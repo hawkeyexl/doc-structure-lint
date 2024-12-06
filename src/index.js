@@ -67,7 +67,7 @@ export async function lintDocument({ file, templatePath, template }) {
     throw new Error(`Template "${template}" not found`);
   }
 
-  const errors = validateStructure(structure, templateConfig);
+  const errors = await validateStructure(structure, templateConfig);
   return {
     success: errors.length === 0,
     errors: errors,
