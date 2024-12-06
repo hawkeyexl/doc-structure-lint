@@ -14,24 +14,29 @@ import { getTempDir, cleanTempDir } from "../util/tempDir.js";
  * @returns {Promise<Object>} - A promise that resolves to the loaded model.
  */
 export async function prepareModel(llama) {
-  // Create a temporary directory for the model
-  const dir = getTempDir();
+  try {
+    // Create a temporary directory for the model
+    const dir = getTempDir();
 
-  // Clean up any files in the directory that aren't expected
-  const expectedFiles = ["Llama-3.2-3B-Instruct-Q4_K_M.gguf"];
-  cleanTempDir(expectedFiles);
+    // Clean up any files in the directory that aren't expected
+    const expectedFiles = ["Llama-3.2-3B-Instruct-Q4_K_M.gguf"];
+    cleanTempDir(expectedFiles);
 
-  // Resolve the model path, downloading if necessary
-  await resolveModelFile(
-    "hf:bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
-    { directory: dir, fileName: "Llama-3.2-3B-Instruct-Q4_K_M.gguf" }
-  );
+    // Resolve the model path, downloading if necessary
+    await resolveModelFile(
+      "hf:bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+      { directory: dir, fileName: "Llama-3.2-3B-Instruct-Q4_K_M.gguf" }
+    );
 
-  const model = await llama.loadModel({
-    modelPath: path.join(dir, "Llama-3.2-3B-Instruct-Q4_K_M.gguf"),
-  });
+    const model = await llama.loadModel({
+      modelPath: path.join(dir, "Llama-3.2-3B-Instruct-Q4_K_M.gguf"),
+    });
 
-  return model;
+    return model;
+  } catch (error) {
+    console.error("Error preparing the model:", error);
+    throw error;
+  }
 }
 
 /**

@@ -145,25 +145,35 @@ export function parseMarkdown(content) {
     };
   };
 
-  const getNodeRawContent = (node) => {
-    switch (node.type) {
-      case 'heading':
-        return `${'#'.repeat(node.depth)} ${node.children.map(child => child.value).join('')}\n`;
-      case 'paragraph':
-        return `${node.children.map(child => child.value).join('')}\n`;
-      case 'code':
-        return `\`\`\`${node.lang}\n${node.value}\n\`\`\`\n`;
-      case 'list':
-        return node.children.map((item, index) => {
-          const prefix = node.ordered ? `${index + 1}. ` : '- ';
-          return prefix + item.children.map(child => 
-            child.type === 'paragraph' ? child.children.map(c => c.value).join('') : ''
-          ).join('\n');
-        }).join('\n') + '\n';
-      default:
-        return '';
-    }
-  };
+const getNodeRawContent = (node) => {
+  if (!node || !node.type) return '';
+  switch (node.type) {
+    case 'heading':
+      return `${'#'.repeat(node.depth)} ${node.children?.map(child => child.value || '').join('') || ''}\n`;
+    case 'paragraph':
+      return `${node.children?.map(child => child.value || '').join('') || ''}\n`;
+    case 'code':
+      return `\`\`\`${node.lang || ''}\n${node.value || ''}\n\`\`\`\n`;
+    case 'list':
+      return node.children.map((item, index) => {
+        const prefix = node.ordered ? `${index + 1}. ` : '- ';
+        return prefix + item.children.map(child => {
+          switch(child.type) {
+            case 'paragraph':
+              return child.children?.map(c => c.value || '').join('') || '';
+            case 'code':
+              return getNodeRawContent(child);
+            case 'list':
+              return getNodeRawContent(child);
+            default:
+              return child.value || '';
+          }
+        }).join('\n');
+      }).join('\n') + '\n';
+    default:
+      return '';
+  }
+};
 
   const processNode = (node, parentSection) => {
     if (!currentSection && node.type !== "yaml" && node.type !== "heading" && node.type !== "root") {
@@ -211,19 +221,19 @@ export function parseMarkdown(content) {
       const paragraph = processParagraph(node);
       addToSequence(currentSection, "paragraphs", paragraph);
       currentSection.paragraphs.push(paragraph);
-      currentSection.rawContent += getNodeRawContent(node);
+      currentSection.rawContent += '\n' + getNodeRawContent(node);
       updateParentPositions(parentSection, node.position.end);
       } else if (node.type === "code") {
       const codeBlock = processCodeBlock(node);
       addToSequence(currentSection, "code_blocks", codeBlock);
       currentSection.codeBlocks.push(codeBlock);
-      currentSection.rawContent += getNodeRawContent(node);
+      currentSection.rawContent += '\n' + getNodeRawContent(node);
       updateParentPositions(parentSection, node.position.end);
       } else if (node.type === "list") {
       const list = processList(node);
       addToSequence(currentSection, "lists", list);
       currentSection.lists.push(list);
-      currentSection.rawContent += getNodeRawContent(node);
+      currentSection.rawContent += '\n' + getNodeRawContent(node);
       updateParentPositions(parentSection, node.position.end);
       }
 

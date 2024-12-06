@@ -136,8 +136,11 @@ export const schema = {
         instructions: {
           description: "Instructions for the author to follow when using the template. Evaluated against content by a local language model.",
           type: "array",
+          minItems: 1,
           items: {
             type: "string",
+            minLength: 5,
+            maxLength: 200,
           },
         },
         heading: {
