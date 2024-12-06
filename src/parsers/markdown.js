@@ -67,6 +67,7 @@ export function parseMarkdown(content) {
       id: uuid(),
       position: node.position,
       content: [],
+      rawContent: getNodeRawContent(node),
       heading: {
         level: node.depth,
         position: node.position,
@@ -131,6 +132,7 @@ export function parseMarkdown(content) {
       id: uuid(),
       position: node.position,
       content: [],
+      rawContent: getNodeRawContent(node),
       heading: {
         level: 0,
         position: null,
@@ -141,6 +143,26 @@ export function parseMarkdown(content) {
       lists: [],
       sections: [],
     };
+  };
+
+  const getNodeRawContent = (node) => {
+    switch (node.type) {
+      case 'heading':
+        return `${'#'.repeat(node.depth)} ${node.children.map(child => child.value).join('')}\n`;
+      case 'paragraph':
+        return `${node.children.map(child => child.value).join('')}\n`;
+      case 'code':
+        return `\`\`\`${node.lang}\n${node.value}\n\`\`\`\n`;
+      case 'list':
+        return node.children.map((item, index) => {
+          const prefix = node.ordered ? `${index + 1}. ` : '- ';
+          return prefix + item.children.map(child => 
+            child.type === 'paragraph' ? child.children.map(c => c.value).join('') : ''
+          ).join('\n');
+        }).join('\n') + '\n';
+      default:
+        return '';
+    }
   };
 
   const processNode = (node, parentSection) => {
@@ -187,20 +209,24 @@ export function parseMarkdown(content) {
       currentSection = newSection;
     } else if (node.type === "paragraph") {
       const paragraph = processParagraph(node);
-      updateParentPositions(parentSection, node.position.end);
       addToSequence(currentSection, "paragraphs", paragraph);
       currentSection.paragraphs.push(paragraph);
-    } else if (node.type === "code") {
-      const codeBlock = processCodeBlock(node);
+      currentSection.rawContent += getNodeRawContent(node);
       updateParentPositions(parentSection, node.position.end);
+      } else if (node.type === "code") {
+      const codeBlock = processCodeBlock(node);
       addToSequence(currentSection, "code_blocks", codeBlock);
       currentSection.codeBlocks.push(codeBlock);
-    } else if (node.type === "list") {
-      const list = processList(node);
+      currentSection.rawContent += getNodeRawContent(node);
       updateParentPositions(parentSection, node.position.end);
+      } else if (node.type === "list") {
+      const list = processList(node);
       addToSequence(currentSection, "lists", list);
       currentSection.lists.push(list);
-    }
+      currentSection.rawContent += getNodeRawContent(node);
+      updateParentPositions(parentSection, node.position.end);
+      }
+
 
     if (node.children && node.type !== "list") {
       node.children.forEach((child) => processNode(child, currentSection));
