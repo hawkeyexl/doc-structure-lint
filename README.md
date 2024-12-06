@@ -21,7 +21,6 @@ A tool to validate Markdown document structure against specified templates, ensu
 - Frontmatter validation
 - AsciiDoc support
 - reStructuredText support
-- Custom validation rules
 - Infer template from document structure
 
 ## Usage (as a CLI tool)
