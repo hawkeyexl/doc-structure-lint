@@ -1,145 +1,110 @@
-# Doc Structure Linter
+# Doc Structure Lint
 
-Doc Structure Linter is a tool designed to validate the structure of documents (Markdown and soon AsciiDoc) against predefined templates. It ensures that your documents adhere to specific structural requirements, making it ideal for maintaining consistency in documentation across projects.
+> **This is an alpha release.** Interfaces and structures are subject to change.
+
+A tool to validate Markdown document structure against specified templates, ensuring consistent documentation across your projects.
 
 ## Features
 
-- Validate Markdown and AsciiDoc files against custom templates
-- Validate ordered sequences of content elements within sections
-- Check for required sections, paragraph counts, and code block requirements
-- Flexible template definitions using YAML
-- Output results in both human-readable text and structured JSON formats
-- Provide precise location information with start and end character indexes for each heading
+- Validate Markdown documents against YAML-defined templates
+- Rich validation capabilities:
+  - Section and subsection structure validation
+  - Paragraph count requirements
+  - List validation (ordered/unordered, item counts)
+  - Code block requirements
+- Detailed error reporting with precise document positions
+- Template dereferencing support for modular template definitions
+- JSON Schema validation for template files
 
-## Installation
+### Planned Features
 
-1. Clone this repository:
+- Frontmatter validation
+- AsciiDoc support
+- reStructuredText support
+- Custom validation rules
+- Infer template from document structure
 
-   ```bash
-   git clone https://github.com/your-username/markdown-structure-linter.git
-   cd markdown-structure-linter
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-## Usage
-
-To use the Markdown and AsciiDoc Structure Linter, you need a Markdown or AsciiDoc file to lint and a template to lint against. The basic command structure is:
+## Usage (as a CLI tool)
 
 ```bash
-node index.js --file <path-to-file> --template <template-name>
+npx doc-structure-lint --file path/to/doc.md --template path/to/template.yaml
 ```
 
 ### Options
 
-- `--file` or `-f`: Path to the Markdown or AsciiDoc file to lint (required)
-- `--template` or `-t`: Name of the template to use (required)
-- `--json`: Output results in JSON format (optional)
+- `--file-path` or `-f`: Path to the Markdown document to validate
+- `--template-path` or `-p`: Path to the YAML template file
+- `--template` or `-t`: Name of the template to use
 
-### Examples
+## Usage (as a package)
 
-- Lint a Markdown file using the "How-to" template:
+## Installation
 
-   ```bash
-   node index.js --file ./docs/how-to-guide.md --template How-to
-   ```
-
-- Lint an AsciiDoc file using the "How-to" template:
-
-   ```bash
-   node index.js --file ./docs/how-to-guide.adoc --template How-to
-   ```
-
-- Lint a file and output results in JSON format:
-
-   ```bash
-   node index.js --file ./docs/api-reference.md --template API-doc --json
-   ```
-
-## Project Structure
-
-The project is organized into the following structure:
-
-```txt
-markdown-structure-linter/
-├── src/
-│   ├── schema.js
-│   ├── templateLoader.js
-│   ├── markdownParser.js
-│   ├── asciidocParser.js
-│   └── structureValidator.js
-├── index.js
-├── templates.yaml
-├── package.json
-└── README.md
+```bash
+npm install doc-structure-lint
 ```
 
-- `src/schema.js`: Defines the JSON schema for template validation
-- `src/templateLoader.js`: Handles loading and validating templates
-- `src/markdownParser.js`: Parses Markdown content into a structured format
-- `src/asciidocParser.js`: Parses AsciiDoc content into a structured format
-- `src/structureValidator.js`: Validates the parsed document structure against the template
-- `index.js`: Main entry point that ties everything together
-- `templates.yaml`: Contains the template definitions
+## API Usage
 
-## Templates
+```javascript
+import { lintDocument } from 'doc-structure-lint';
 
-Templates are defined in the `templates.yaml` file. Each template specifies the expected structure of a document, including:
-
-- Sequencing of content within sections
-- Required sections
-- Paragraph count limits
-- Code block requirements
-- Nested section structures
-
-For more information on creating and modifying templates, refer to the comments in the `templates.yaml` file.
-
-## Output
-
-### Text Output (Default)
-
-When run without the `--json` flag, the linter provides human-readable output:
-
-```txt
-Structure violations found:
-- [Introduction] (start: 0, end: 150): Expected at least 2 paragraphs, but found 1
-- [Usage] (start: 151, end: 500): Missing required section "Examples"
-```
-
-### JSON Output
-
-When run with the `--json` flag, the linter outputs structured JSON:
-
-```json
-{
-  "success": false,
-  "errors": [
-    {
-      "head": "Introduction",
-      "startIndex": 0,
-      "endIndex": 150,
-      "message": "Expected at least 2 paragraphs, but found 1"
-    },
-    {
-      "head": "Usage",
-      "startIndex": 151,
-      "endIndex": 500,
-      "message": "Missing required section \"Examples\""
-    }
-  ]
+async function validateDocument() {
+    const result = await lintDocument({
+      file: "path/to/doc.md",
+      templatePath: "path/to/template.yaml",
+      template: "Template name",
+    });
 }
 ```
 
-The `startIndex` and `endIndex` properties provide the character positions of the start and end of each section, allowing for precise location of issues within the document.
+## Template Format
+
+Templates are defined in YAML and can specify:
+
+```yaml
+templates:
+  how-to-guide: # Template name
+    sections:
+      introduction: # Section name
+        paragraphs: # Paragraph count requirements for the whole section
+          min: 1
+          max: 3
+      prerequisites:
+        sequence:    # Specific sequence of elements in the section
+            - paragraphs:
+               min: 1
+            - lists:
+               min: 1
+               items:
+                  min: 2
+      usage:
+        code_blocks:
+          min: 1
+        sections:
+          advanced_features: # Subsection name
+            required: false
+          troubleshooting:
+```
+
+> **Note:** Comprehensive rules reference coming soon.
+
+## Development
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run tests:
+   ```bash
+   npm test
+   ```
 
 ## Contributing
 
-Contributions to the Markdown and AsciiDoc Structure Linter are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see the [LICENSE](LICENSE) file for details.
