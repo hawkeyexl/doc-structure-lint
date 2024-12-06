@@ -123,25 +123,3 @@ export async function validateInstructions(section, template) {
   llama.dispose(); // Free up resources
   return errors;
 }
-
-// (async () => {
-//   const section = {
-//     rawContent: "My favorite colors are red, yellow, and blue.",
-//     heading: {
-//       content: "Colors",
-//     },
-//     position: {
-//       start: { offset: 0 },
-//       end: { offset: 10 },
-//     },
-//   };
-//   const template = {
-//     instructions: [
-//       "Mention all three primary colors.",
-//       "Descibe secondary colors.",
-//       "Explain the difference between primary and secondary colors.",
-//     ],
-//   };
-//   const errors = await validateInstructions(section, template);
-//   console.log(errors);
-// })();
