@@ -59,11 +59,13 @@ async function validateInstruction(model, grammar, instruction, content) {
   const session = new LlamaChatSession({
     contextSequence: context.getSequence(),
     systemPrompt:
-      "You are a technical editor who evaluates instructions against sections of a document. Evaluate the supplied content follows the specified instruction. Output your results as JSON.",
+      "You are a technical editor who evaluates instructions against sections of a document. Strictly evaluate if the supplied content follows the specified instruction. Output your results as JSON.",
   });
   const input = { instruction, content };
   const response = await session.prompt(JSON.stringify(input), { grammar });
   const parsedResponse = grammar.parse(response);
+  await context.dispose();
+  await session.dispose();
   if (parsedResponse.assessment === "fail") return parsedResponse;
   return null;
 }
@@ -75,7 +77,8 @@ export async function validateInstructions(section, template) {
   const model = await prepareModel();
   const grammar = await prepareGrammar();
 
-  for (const instruction of template.instructions) {
+  for (const index in template.instructions) {
+    const instruction = template.instructions[index];
     const error = await validateInstruction(
       model,
       grammar,
@@ -87,7 +90,7 @@ export async function validateInstructions(section, template) {
         new ValidationError(
           "instruction_error",
           section.heading.content,
-          error.explanation,
+          `Instruction: ${instruction}${!instruction.endsWith(".") ? "." : ""} Explanation: ${error.explanation}`,
           section.position
         )
       );
@@ -98,7 +101,7 @@ export async function validateInstructions(section, template) {
 
 (async () => {
   const section = {
-    rawContent: "My favorite colors are red and blue.",
+    rawContent: "My favorite colors are red, yellow, and blue.",
     heading: {
       content: "Colors",
     },
@@ -109,9 +112,9 @@ export async function validateInstructions(section, template) {
   };
   const template = {
     instructions: [
-      {
-        rule: "This section should mention all three primary colors.",
-      },
+      "Mention all three primary colors.",
+      "Descibe secondary colors.",
+      "Explain the difference between primary and secondary colors.",
     ],
   };
   const errors = await validateInstructions(section, template);
