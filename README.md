@@ -27,13 +27,13 @@ A tool to validate Markdown document structure against specified templates, ensu
 ## Usage (as a CLI tool)
 
 ```bash
-npx doc-structure-lint --file path/to/doc.md --template path/to/template.yaml
+npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
 ```
 
 ### Options
 
 - `--file-path` or `-f`: Path to the Markdown document to validate
-- `--template-path` or `-p`: Path to the YAML template file
+- `--template-path` or `-p`: Path to the YAML template file (default: `./template.yaml`)
 - `--template` or `-t`: Name of the template to use
 
 ## Usage (as a package)
