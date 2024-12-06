@@ -1,16 +1,34 @@
-import { fileURLToPath } from "url";
+import os from "os";
+import fs from "fs";
 import path from "path";
-import { getLlama, LlamaChatSession } from "node-llama-cpp";
+import { getLlama, LlamaChatSession, resolveModelFile } from "node-llama-cpp";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Create a temporary directory for the model
+const dir = path.join(os.tmpdir(), "doc-structure-lint", "models");
+// Recursively create the directory if it doesn't exist
+if (!fs.existsSync(dir)) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+// Clean up any files in the directory that aren't expected
+const expectedFiles = [
+    "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+]
+fs.readdirSync(dir).forEach((file) => {
+  if (!expectedFiles.includes(file)) {
+    fs.unlinkSync(path.join(dir, file));
+    }
+});
+
+// Resolve the model path, downloading if necessary
+await resolveModelFile(
+  "hf:bartowski/Llama-3.2-3B-Instruct-GGUF/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+  { directory: dir, fileName: "Llama-3.2-3B-Instruct-Q4_K_M.gguf" }
+);
 
 const llama = await getLlama();
 const model = await llama.loadModel({
-  modelPath: path.join(
-    process.cwd(),
-    "models",
-    "Phi-3.5-mini-instruct.Q4_K_S.gguf"
-  ),
+  modelPath: path.join(dir, "Llama-3.2-3B-Instruct-Q4_K_M.gguf"),
 });
 const context = await model.createContext();
 const session = new LlamaChatSession({
@@ -20,14 +38,15 @@ const session = new LlamaChatSession({
 });
 const grammar = await llama.createGrammarForJsonSchema({
   type: "object",
+  required: ["assessment"],
   properties: {
     assessment: {
       description: "The result of the evaluation",
       type: "string",
       enum: ["pass", "fail"],
     },
-    evaluation: {
-      description: "Only populated if 'evaluation' is 'fail'. Suggestions for improvement, if any.",
+    explanation: {
+      description: "Suggestions for improvement, if any.",
       type: "string",
       maxLength: 500,
     },
@@ -40,4 +59,5 @@ const input = { rule, content };
 console.log(input);
 
 const response = await session.prompt(JSON.stringify(input), { grammar });
-console.log(JSON.parse(response));
+const parsedResponse = grammar.parse(response);
+console.log(parsedResponse);
