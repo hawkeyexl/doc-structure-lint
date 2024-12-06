@@ -38,7 +38,7 @@ templates:
         fs.writeFileSync(documentFile, document);
 
         const { stdout, stderr } = await execAsync(
-            `npx . --file="${documentFile}" --template-path="${templateFile}" --template="test-template"`
+            `npx . --file-path ${documentFile} --template-path ${templateFile} --template test-template`
         );
 
         expect(stdout).to.include("Validation successful");
@@ -61,7 +61,7 @@ templates:
 
         try {
             await execAsync(
-                `npx . --file="${documentFile}" --template-path="${templateFile}" --template="test-template"`
+                `npx . --file-path="${documentFile}" --template-path="${templateFile}" --template="test-template"`
             );
             expect.fail("Should have thrown an error");
         } catch (error) {
@@ -90,7 +90,7 @@ templates:
     it("should handle invalid template path gracefully", async () => {
         try {
             await execAsync(
-                `npx . --file="${documentFile}" --template-path="non-existent.yaml" --template="test-template"`
+                `npx . --file-path="${documentFile}" --template-path="non-existent.yaml" --template="test-template"`
             );
             expect.fail("Should have thrown an error");
         } catch (error) {
@@ -103,7 +103,7 @@ templates:
         fs.writeFileSync(templateFile, "invalid: yaml: content:");
         try {
             await execAsync(
-                `npx . --file="${documentFile}" --template-path="${templateFile}" --template="test-template"`
+                `npx . --file-path="${documentFile}" --template-path="${templateFile}" --template="test-template"`
             );
             expect.fail("Should have thrown an error");
         } catch (error) {

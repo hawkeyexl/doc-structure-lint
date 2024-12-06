@@ -13,8 +13,8 @@ const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
   if ([".md", ".markdown"].includes(extension)) {
     return "markdown";
-  // } else if ([".adoc", ".asciidoc"].includes(extension)) {
-  //   return "asciidoc";
+    // } else if ([".adoc", ".asciidoc"].includes(extension)) {
+    //   return "asciidoc";
   }
 
   // If extension is not conclusive, check content
@@ -45,14 +45,19 @@ export async function lintDocument({ file, templatePath, template }) {
   } catch (error) {
     throw new Error(`Failed to load and validate templates: ${error.message}`);
   }
-  const fileContent = readFileSync(file, "utf8");
+  let fileContent;
+  try {
+    fileContent = readFileSync(file, "utf8");
+  } catch (error) {
+    throw new Error(`Failed to read file: ${error.message}`);
+  }
   const fileType = inferFileType(file, fileContent);
 
   let structure;
   if (fileType === "markdown") {
     structure = parseMarkdown(fileContent);
-  // } else if (fileType === "asciidoc") {
-  //   structure = parseAsciiDoc(fileContent);
+    // } else if (fileType === "asciidoc") {
+    //   structure = parseAsciiDoc(fileContent);
   } else {
     throw new Error(`Unsupported file type: ${fileType}`);
   }
@@ -72,7 +77,7 @@ export async function lintDocument({ file, templatePath, template }) {
 async function main() {
   // Parse command-line arguments
   const argv = yargs(hideBin(process.argv))
-    .option("file", {
+    .option("file-path", {
       alias: "f",
       description: "Path to the file to lint",
       type: "string",
@@ -100,7 +105,7 @@ async function main() {
 
   try {
     const result = await lintDocument({
-      file: argv.file,
+      file: argv.filePath,
       templatePath: argv.templatePath,
       template: argv.template,
     });
@@ -121,7 +126,7 @@ async function main() {
       }
     }
   } catch (error) {
-    console.error("An error occurred:", error);
+    console.error(error.message);
     process.exit(1);
   }
 }
@@ -132,8 +137,5 @@ if (
   process.argv[1].endsWith("doc-structure-lint/src/index.js") ||
   process.argv[1].endsWith("doc-structure-lint\\src\\index.js")
 ) {
-  main().catch((error) => {
-    console.error("An error occurred:", error);
-    process.exit(1);
-  });
+  main();
 }
