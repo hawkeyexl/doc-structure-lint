@@ -5,13 +5,14 @@
   "bin": {
     "doc-structure-lint": "src/index.js"
   },
-  "main": "src/index.js",
+  "main": "src/extension.ts",
   "scripts": {
     "postinstall": "node src/util/preloadModel.js",
     "clean": "node src/util/tempDir.js clean",
     "start": "node src/index.js",
     "test": "mocha 'src/**/*.test.js'",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build": "tsc -p ./"
   },
   "author": "Manny Silva",
   "license": "MIT",
@@ -25,7 +26,8 @@
     "remark-frontmatter": "^5.0.0",
     "uuid": "^11.0.3",
     "yaml": "^2.6.1",
-    "yargs": "^17.7.2"
+    "yargs": "^17.7.2",
+    "vscode": "^1.1.37"
   },
   "devDependencies": {
     "chai": "^5.1.2",
