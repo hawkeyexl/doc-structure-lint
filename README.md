@@ -265,3 +265,38 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
+
+## VS Code Extension
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Open the repository in VS Code
+4. Press `F5` to open a new VS Code window with the extension loaded
+
+### Usage
+
+- The extension provides real-time linting during document editing for Markdown files.
+- Linting errors are displayed in the VS Code Problems panel.
+- You can trigger linting manually via the command palette by running the `Doc Structure Lint: Lint Document` command.
+
+### Configuration
+
+- You can configure the template source URI in the VS Code settings.
+- The extension supports both `https://` and `file://` schemes for the template source URI.
+- If the scheme is omitted, it defaults to `file://`.
+- You can specify the template at the document level using frontmatter.
+  - Required: `template` field specifies the template ID.
+  - Optional: `template_source` field overrides the global template source.
+
+### Real-time Linting
+
+- The extension provides real-time linting during document editing for Markdown files.
+- Linting errors are displayed in the VS Code Problems panel as you type.
+- The extension uses the `doc-structure-lint` tool to validate the document structure against the specified template.
