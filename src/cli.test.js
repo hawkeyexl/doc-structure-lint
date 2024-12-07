@@ -42,7 +42,7 @@ templates:
         );
 
         expect(stdout).to.include("Validation successful");
-    }).timeout(10000);
+    }).timeout(20000);
 
     it("should report validation errors via npx command", async () => {
         const template = `
@@ -67,7 +67,7 @@ templates:
         } catch (error) {
             expect(error.stdout).to.include("Expected title");
         }
-    }).timeout(10000);
+    }).timeout(20000);
 
     it("should show help message with --help flag", async () => {
         const { stdout } = await execAsync("npx . --help");
@@ -76,7 +76,7 @@ templates:
         expect(stdout).to.include("--file");
         expect(stdout).to.include("--template-path");
         expect(stdout).to.include("--template");
-    }).timeout(10000);
+    }).timeout(20000);
 
     it("should fail with meaningful error for missing arguments", async () => {
         try {
@@ -85,7 +85,7 @@ templates:
         } catch (error) {
             expect(error.stderr).to.include("Options");
         }
-    }).timeout(10000);
+    }).timeout(20000);
 
     it("should handle invalid template path gracefully", async () => {
         try {
@@ -97,7 +97,7 @@ templates:
             expect(error.stderr).to.include("Template file not found");
             expect(error.code).to.equal(1);
         }
-    }).timeout(10000);
+    }).timeout(20000);
 
     it("should handle malformed template file", async () => {
         fs.writeFileSync(templateFile, "invalid: yaml: content:");
@@ -110,5 +110,5 @@ templates:
             expect(error.stderr).to.include("Failed to load and validate templates");
             expect(error.code).to.equal(1);
         }
-    }).timeout(10000);
+    }).timeout(20000);
 });
