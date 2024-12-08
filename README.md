@@ -8,10 +8,10 @@ A tool to validate Markdown document structure against specified templates, ensu
 
 - Validate Markdown documents against YAML-defined templates
 - Rich validation capabilities:
-  - Section and subsection structure validation
-  - Paragraph count requirements
-  - List validation (ordered/unordered, item counts)
-  - Code block requirements
+  - [Section and subsection structure validation](#section-properties)
+  - [Paragraph count requirements](#paragraphs)
+  - [List validation](#lists) (ordered/unordered, item counts)
+  - [Code block requirements](#code-blocks)
 - Detailed error reporting with precise document positions
 - Template dereferencing support for modular template definitions
 - JSON Schema validation for template files
