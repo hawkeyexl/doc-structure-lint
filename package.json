@@ -20,6 +20,8 @@
     "@apidevtools/json-schema-ref-parser": "^11.7.3",
     "ajv": "^8.17.1",
     "asciidoctor": "^3.0.4",
+    "axios": "^1.7.9",
+    "crypto": "^1.0.1",
     "node-llama-cpp": "^3.3.0",
     "remark": "^15.0.1",
     "remark-frontmatter": "^5.0.0",

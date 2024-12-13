@@ -37,8 +37,8 @@ export DOC_STRUCTURE_LINT_PRELOAD=0 && npx doc-structure-lint --file-path path/t
 
 ### Options
 
-- `--file-path` or `-f`: Path to the Markdown document to validate
-- `--template-path` or `-p`: Path to the YAML template file (default: `./template.yaml`)
+- `--file-path` or `-f`: Path to the Markdown document to validate (supports URLs)
+- `--template-path` or `-p`: Path to the YAML template file (default: `./template.yaml`, supports URLs)
 - `--template` or `-t`: Name of the template to use
 - `--json`: Output results in JSON format
 
@@ -265,3 +265,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Notes on URL validation and error handling
+
+- Ensure that the provided `file-path` or `template-path` is a valid URL.
+- If the URL is not accessible or the file content cannot be fetched, meaningful error messages will be provided.
+- The temporary directory used for storing fetched files will be cleaned up after processing to avoid clutter.
