@@ -1,6 +1,6 @@
 {
   "name": "doc-structure-lint",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
     "doc-structure-lint": "src/index.js"
@@ -9,6 +9,8 @@
   "scripts": {
     "postinstall": "node src/util/preloadModel.js",
     "clean": "node src/util/tempDir.js clean",
+    "build": "tsc",
+    "watch": "tsc -w",
     "start": "node src/index.js",
     "test": "mocha 'src/**/*.test.js'",
     "prepare": "husky"
@@ -20,7 +22,8 @@
     "@apidevtools/json-schema-ref-parser": "^11.7.3",
     "ajv": "^8.17.1",
     "asciidoctor": "^3.0.4",
-    "node-llama-cpp": "^3.3.0",
+    "json-schema-to-ts": "^3.1.1",
+    "node-llama-cpp": "^3.3.1",
     "remark": "^15.0.1",
     "remark-frontmatter": "^5.0.0",
     "uuid": "^11.0.3",
@@ -28,10 +31,12 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@types/yargs": "^17.0.33",
     "chai": "^5.1.2",
     "husky": "^9.1.7",
     "mocha": "^11.0.1",
-    "sinon": "^19.0.2"
+    "sinon": "^19.0.2",
+    "typescript": "^5.7.2"
   },
   "files": [
     "index.js",
