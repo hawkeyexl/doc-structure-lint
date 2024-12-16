@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "fs";
+import { readFileSync, statSync, readdirSync } from "fs";
 import path from "path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
@@ -24,6 +24,33 @@ const inferFileType = (filePath, content) => {
 
   // Default to markdown if unable to determine
   return "markdown";
+};
+
+const isDirectory = (path) => {
+  try {
+    return statSync(path).isDirectory();
+  } catch (error) {
+    return false;
+  }
+};
+
+const getSupportedFiles = (dirPath) => {
+  const files = [];
+  const items = readdirSync(dirPath);
+
+  for (const item of items) {
+    const fullPath = path.join(dirPath, item);
+    if (isDirectory(fullPath)) {
+      files.push(...getSupportedFiles(fullPath));
+    } else {
+      const extension = path.extname(fullPath).toLowerCase();
+      if ([".md", ".markdown"].includes(extension)) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  return files;
 };
 
 /**
@@ -79,7 +106,7 @@ async function main() {
   const argv = yargs(hideBin(process.argv))
     .option("file-path", {
       alias: "f",
-      description: "Path to the file to lint",
+      description: "Path to the file (or directory of files) to lint",
       type: "string",
       demandOption: true,
     })
@@ -104,26 +131,49 @@ async function main() {
     .alias("help", "h").argv;
 
   try {
-    const result = await lintDocument({
-      file: argv.filePath,
-      templatePath: argv.templatePath,
-      template: argv.template,
-    });
+    const filePath = argv.filePath;
+    let results = [];
+
+    let files = [];
+    if (isDirectory(filePath)) {
+      files.push(...getSupportedFiles(filePath));
+    } else {
+      files.push(filePath);
+    }
+
+    if (files.length === 0) {
+      console.log("No supported files found.");
+      process.exit(1);
+    }
+
+    for (const file of files) {
+      const result = await lintDocument({
+        file,
+        templatePath: argv.templatePath,
+        template: argv.template,
+      });
+      results.push({ file, ...result });
+    }
 
     if (argv.json) {
-      console.log(JSON.stringify(result, null, 2));
+      console.log(JSON.stringify(results, null, 2));
     } else {
-      if (result.errors.length > 0) {
-        console.log("Structure violations found:");
-        result.errors.forEach((error) =>
-          console.log(
-            `- [${error.type}] ${error.heading} (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`
-          )
-        );
-        process.exit(1);
-      } else {
-        console.log("Validation successful! 🎉");
-      }
+      let hasErrors = false;
+      results.forEach(({ file, errors }) => {
+        console.log(file);
+        if (errors.length > 0) {
+          hasErrors = true;
+          errors.forEach((error) =>
+            console.log(
+              `- [${error.type}] ${error.heading} (start: ${error.position.start.offset}, end: ${error.position.end.offset}): ${error.message}`
+            )
+          );
+          process.exitCode = 1;
+        } else {
+          console.log("  Validation successful! 🎉");
+        }
+      });
+
     }
   } catch (error) {
     console.error(error.message);
