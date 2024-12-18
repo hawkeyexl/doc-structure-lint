@@ -265,9 +265,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Notes on URL validation and error handling
-
-- Ensure that the provided `file-path` or `template-path` is a valid URL.
-- If the URL is not accessible or the file content cannot be fetched, meaningful error messages will be provided.
-- The temporary directory used for storing fetched files will be cleaned up after processing to avoid clutter.
