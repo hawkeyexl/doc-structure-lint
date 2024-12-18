@@ -17,7 +17,7 @@ import { fileURLToPath } from "url";
  * @property {string} [content] - The file content (only for local files).
  * @property {string} [message] - The error message (only present if result is "error").
  */
-async function getFile(pathOrUrl) {
+export async function getFile(pathOrUrl) {
   try {
     // Check if the input is a URL or file path
     const isURL = pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://');
@@ -76,5 +76,3 @@ async function getFile(pathOrUrl) {
     return { result: "error", message: error };
   }
 }
-
-export default getFile;

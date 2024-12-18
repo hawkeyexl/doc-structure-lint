@@ -8,6 +8,7 @@ import { loadAndValidateTemplates } from "./templateLoader.js";
 import { parseMarkdown } from "./parsers/markdown.js";
 import { parseAsciiDoc } from "./parsers/asciidoc.js";
 import { validateStructure } from "./rules/structureValidator.js";
+import { getFile } from "./util/getFile.js";
 
 const inferFileType = (filePath, content) => {
   const extension = path.extname(filePath).toLowerCase();
@@ -72,19 +73,19 @@ export async function lintDocument({ file, templatePath, template }) {
   } catch (error) {
     throw new Error(`Failed to load and validate templates: ${error.message}`);
   }
-  let fileContent;
+  let fetchedFile;
   try {
-    fileContent = readFileSync(file, "utf8");
+    fetchedFile = await getFile(file);
   } catch (error) {
     throw new Error(`Failed to read file: ${error.message}`);
   }
-  const fileType = inferFileType(file, fileContent);
+  const fileType = inferFileType(file, fetchedFile.content);
 
   let structure;
   if (fileType === "markdown") {
-    structure = parseMarkdown(fileContent);
+    structure = parseMarkdown(fetchedFile.content);
     // } else if (fileType === "asciidoc") {
-    //   structure = parseAsciiDoc(fileContent);
+    //   structure = parseAsciiDoc(fetchedFile);
   } else {
     throw new Error(`Unsupported file type: ${fileType}`);
   }

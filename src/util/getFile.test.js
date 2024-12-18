@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import getFile from './getFile.js';
+import { getFile } from './getFile.js';
 
 describe('getFile', () => {
     let sandbox;
