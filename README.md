@@ -37,7 +37,7 @@ export DOC_STRUCTURE_LINT_PRELOAD=0 && npx doc-structure-lint --file-path path/t
 
 ### Options
 
-- `--file-path` or `-f`: Path to the Markdown document to validate
+- `--file-path` or `-f`: Path to the file (or directory of files) to lint
 - `--template-path` or `-p`: Path to the YAML template file (default: `./template.yaml`)
 - `--template` or `-t`: Name of the template to use
 - `--json`: Output results in JSON format
