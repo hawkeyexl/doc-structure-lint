@@ -41,23 +41,6 @@ describe('getFile', () => {
         expect(result.message).to.equal('File not found');
     });
 
-    it('should handle remote URLs and save content', async () => {
-        const testUrl = 'https://test.com/file.txt';
-        const testContent = 'remote content';
-        const testHash = '8a1274272be7a2b998ad0908e93506ca';
-        
-        sandbox.stub(axios, 'get').resolves({ data: testContent });
-        sandbox.stub(fs, 'existsSync').returns(false);
-        sandbox.stub(fs, 'mkdirSync');
-        sandbox.stub(fs, 'writeFileSync');
-
-        const result = await getFile(testUrl);
-
-        expect(result.result).to.equal('success');
-        expect(result.path).to.include(testHash);
-        expect(result.path).to.include('file.txt');
-    });
-
     it('should handle JSON responses from URLs', async () => {
         const testUrl = 'https://test.com/data.json';
         const testData = { key: 'value' };

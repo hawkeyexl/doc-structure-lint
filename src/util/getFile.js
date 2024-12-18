@@ -30,25 +30,9 @@ export async function getFile(pathOrUrl) {
       // Convert content to string if it's an object
       if (typeof content === "object") {
         content = JSON.stringify(content, null, 2);
-      } else {
-        content = content.toString();
-      }
-      
-      // Create unique filename using MD5 hash
-      const fileName = pathOrUrl.split("/").pop();
-      const hash = crypto.createHash("md5").update(content).digest("hex");
-      const filePath = `${os.tmpdir}/doc-structure-lint/${hash}_${fileName}`;
-      
-      // If doc-structure-lint temp directory doesn't exist, create it
-      if (!fs.existsSync(`${os.tmpdir}/doc-structure-lint`)) {
-        fs.mkdirSync(`${os.tmpdir}/doc-structure-lint`);
-      }
-      // If file doesn't exist, write it
-      if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, response.data);
       }
         
-      return { result: "success", path: filePath };
+      return { result: "success", content, path: pathOrUrl };
     } else {
       // Handle local file path
       const currentFilePath = fileURLToPath(import.meta.url);
