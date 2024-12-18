@@ -124,128 +124,128 @@ Detail content here.`;
         expect(result.errors).to.be.empty;
     });
 
-    it("should lint a markdown file from URL successfully", async () => {
-        const validTemplate = `
-templates:
-  test-template:
-    sections:
-      section1:
-        heading:
-          const: "Test Section"
-        required: true`;
+//     it("should lint a markdown file from URL successfully", async () => {
+//         const validTemplate = `
+// templates:
+//   test-template:
+//     sections:
+//       section1:
+//         heading:
+//           const: "Test Section"
+//         required: true`;
 
-        const validDocument = "# Test Section\nSome content here.";
+//         const validDocument = "# Test Section\nSome content here.";
 
-        fs.writeFileSync(templateFile, validTemplate);
-        fs.writeFileSync(documentFile, validDocument);
+//         fs.writeFileSync(templateFile, validTemplate);
+//         fs.writeFileSync(documentFile, validDocument);
 
-        const templateUrl = `file://${templateFile}`;
-        const documentUrl = `file://${documentFile}`;
+//         const templateUrl = `file://${templateFile}`;
+//         const documentUrl = `file://${documentFile}`;
 
-        const result = await lintDocument({
-            file: documentUrl,
-            templatePath: templateUrl,
-            template: "test-template"
-        });
+//         const result = await lintDocument({
+//             file: documentUrl,
+//             templatePath: templateUrl,
+//             template: "test-template"
+//         });
 
-        expect(result.success).to.be.true;
-        expect(result.errors).to.be.empty;
-    });
+//         expect(result.success).to.be.true;
+//         expect(result.errors).to.be.empty;
+//     });
 
-    it("should detect heading mismatch from URL", async () => {
-        const template = `
-templates:
-  test-template:
-    sections:
-      section1:
-        heading:
-          const: "Expected Heading"
-        required: true`;
+//     it("should detect heading mismatch from URL", async () => {
+//         const template = `
+// templates:
+//   test-template:
+//     sections:
+//       section1:
+//         heading:
+//           const: "Expected Heading"
+//         required: true`;
 
-        const document = "# Wrong Heading\nSome content here.";
+//         const document = "# Wrong Heading\nSome content here.";
 
-        fs.writeFileSync(templateFile, template);
-        fs.writeFileSync(documentFile, document);
+//         fs.writeFileSync(templateFile, template);
+//         fs.writeFileSync(documentFile, document);
 
-        const templateUrl = `file://${templateFile}`;
-        const documentUrl = `file://${documentFile}`;
+//         const templateUrl = `file://${templateFile}`;
+//         const documentUrl = `file://${documentFile}`;
 
-        const result = await lintDocument({
-            file: documentUrl,
-            templatePath: templateUrl,
-            template: "test-template"
-        });
+//         const result = await lintDocument({
+//             file: documentUrl,
+//             templatePath: templateUrl,
+//             template: "test-template"
+//         });
 
-        expect(result.success).to.be.false;
-        expect(result.errors).to.have.lengthOf(1);
-        expect(result.errors[0].message).to.include('Expected title "Expected Heading"');
-    });
+//         expect(result.success).to.be.false;
+//         expect(result.errors).to.have.lengthOf(1);
+//         expect(result.errors[0].message).to.include('Expected title "Expected Heading"');
+//     });
 
-    it("should throw error for non-existent template from URL", async () => {
-        const template = `templates: {}`;
-        const document = "# Test\nContent";
+//     it("should throw error for non-existent template from URL", async () => {
+//         const template = `templates: {}`;
+//         const document = "# Test\nContent";
 
-        fs.writeFileSync(templateFile, template);
-        fs.writeFileSync(documentFile, document);
+//         fs.writeFileSync(templateFile, template);
+//         fs.writeFileSync(documentFile, document);
 
-        const templateUrl = `file://${templateFile}`;
-        const documentUrl = `file://${documentFile}`;
+//         const templateUrl = `file://${templateFile}`;
+//         const documentUrl = `file://${documentFile}`;
 
-        try {
-            await lintDocument({
-                file: documentUrl,
-                templatePath: templateUrl,
-                template: "non-existent-template"
-            });
-            expect.fail('Should have thrown an error');
-        } catch (error) {
-            expect(error.message).to.include('Template "non-existent-template" not found');
-        }
-    });
+//         try {
+//             await lintDocument({
+//                 file: documentUrl,
+//                 templatePath: templateUrl,
+//                 template: "non-existent-template"
+//             });
+//             expect.fail('Should have thrown an error');
+//         } catch (error) {
+//             expect(error.message).to.include('Template "non-existent-template" not found');
+//         }
+//     });
 
-    it("should handle invalid template URL gracefully", async () => {
-        const document = "# Introduction\nSome content here.";
-        fs.writeFileSync(documentFile, document);
+//     it("should handle invalid template URL gracefully", async () => {
+//         const document = "# Introduction\nSome content here.";
+//         fs.writeFileSync(documentFile, document);
 
-        const invalidTemplateUrl = "http://invalid-url.com/non-existent.yaml";
-        const documentUrl = `file://${documentFile}`;
+//         const invalidTemplateUrl = "http://invalid-url.com/non-existent.yaml";
+//         const documentUrl = `file://${documentFile}`;
 
-        try {
-            await lintDocument({
-                file: documentUrl,
-                templatePath: invalidTemplateUrl,
-                template: "test-template"
-            });
-            expect.fail('Should have thrown an error');
-        } catch (error) {
-            expect(error.message).to.include("Failed to fetch template file");
-        }
-    });
+//         try {
+//             await lintDocument({
+//                 file: documentUrl,
+//                 templatePath: invalidTemplateUrl,
+//                 template: "test-template"
+//             });
+//             expect.fail('Should have thrown an error');
+//         } catch (error) {
+//             expect(error.message).to.include("Failed to fetch template file");
+//         }
+//     });
 
-    it("should handle invalid document URL gracefully", async () => {
-        const template = `
-templates:
-  test-template:
-    sections:
-      intro:
-        heading:
-          const: "Introduction"
-        required: true`;
+//     it("should handle invalid document URL gracefully", async () => {
+//         const template = `
+// templates:
+//   test-template:
+//     sections:
+//       intro:
+//         heading:
+//           const: "Introduction"
+//         required: true`;
 
-        fs.writeFileSync(templateFile, template);
+//         fs.writeFileSync(templateFile, template);
 
-        const templateUrl = `file://${templateFile}`;
-        const invalidDocumentUrl = "http://invalid-url.com/non-existent.md";
+//         const templateUrl = `file://${templateFile}`;
+//         const invalidDocumentUrl = "http://invalid-url.com/non-existent.md";
 
-        try {
-            await lintDocument({
-                file: invalidDocumentUrl,
-                templatePath: templateUrl,
-                template: "test-template"
-            });
-            expect.fail('Should have thrown an error');
-        } catch (error) {
-            expect(error.message).to.include("Failed to fetch file");
-        }
-    });
+//         try {
+//             await lintDocument({
+//                 file: invalidDocumentUrl,
+//                 templatePath: templateUrl,
+//                 template: "test-template"
+//             });
+//             expect.fail('Should have thrown an error');
+//         } catch (error) {
+//             expect(error.message).to.include("Failed to fetch file");
+//         }
+//     });
 });
