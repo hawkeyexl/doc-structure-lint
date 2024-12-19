@@ -29,10 +29,10 @@ A tool to validate Markdown document structure against specified templates, ensu
 npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
 ```
 
-Doc Structure Lint uses a _local_ language model to evaluate some parts of your templates and content. This model only takes about 2 GB of storage, and it's only downloaded once. When you run the tool for the first time, it may take a few minutes to download the language model. If you don't want to download the model during installation, set the `DOC_STRUCTURE_LINT_PRELOAD` environment variable to `0`. However, if you specify an `instructions` property in your template, the model will be downloaded regardless of the `DOC_STRUCTURE_LINT_PRELOAD` variable value.
+Doc Structure Lint uses a _local_ language model to evaluate the `instructions` rules of your templates. This model only takes about 2 GB of storage, and it's only downloaded once. The first time you run the tool with a template that uses `instructions`, it may take a few minutes to download the language model. If you want to preload the model during installation, set the `DOC_STRUCTURE_LINT_PRELOAD` environment variable to `1`.
 
 ```bash
-export DOC_STRUCTURE_LINT_PRELOAD=0 && npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
+export DOC_STRUCTURE_LINT_PRELOAD=1 && npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
 ```
 
 ### Options
