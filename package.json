@@ -1,6 +1,6 @@
 {
   "name": "doc-structure-lint",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
   "bin": {
     "doc-structure-lint": "src/index.js"
@@ -22,7 +22,7 @@
     "asciidoctor": "^3.0.4",
     "axios": "^1.7.9",
     "crypto": "^1.0.1",
-    "node-llama-cpp": "^3.3.0",
+    "node-llama-cpp": "^3.3.1",
     "remark": "^15.0.1",
     "remark-frontmatter": "^5.0.0",
     "uuid": "^11.0.3",
