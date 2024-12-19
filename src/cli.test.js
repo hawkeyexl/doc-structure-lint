@@ -94,7 +94,7 @@ templates:
             );
             expect.fail("Should have thrown an error");
         } catch (error) {
-            expect(error.stderr).to.include("Template file not found");
+            expect(error.stderr).to.include("Error reading template file");
             expect(error.code).to.equal(1);
         }
     }).timeout(20000);

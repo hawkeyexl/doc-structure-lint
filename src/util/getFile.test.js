@@ -41,6 +41,20 @@ describe('getFile', () => {
         expect(result.message).to.equal('File not found');
     });
 
+    it('should handle string responses from URLs', async () => {
+        const testUrl = 'https://test.com/data.txt';
+        const testData = 'value';
+        
+        sandbox.stub(axios, 'get').resolves({ data: testData });
+        sandbox.stub(fs, 'existsSync').returns(false);
+        sandbox.stub(fs, 'mkdirSync');
+        sandbox.stub(fs, 'writeFileSync');
+        
+        const result = await getFile(testUrl);
+
+        expect(typeof result.content).to.equal('string');
+    });
+
     it('should handle JSON responses from URLs', async () => {
         const testUrl = 'https://test.com/data.json';
         const testData = { key: 'value' };
@@ -51,9 +65,24 @@ describe('getFile', () => {
         sandbox.stub(fs, 'writeFileSync');
         
         const result = await getFile(testUrl);
-        
-        expect(result.result).to.equal('success');
+
+        expect(typeof result.content).to.equal("object");
     });
+
+    it('should handle YAML responses from URLs', async () => {
+        const testUrl = 'https://test.com/data.yaml';
+        const testData = 'key: value';
+        
+        sandbox.stub(axios, 'get').resolves({ data: testData });
+        sandbox.stub(fs, 'existsSync').returns(false);
+        sandbox.stub(fs, 'mkdirSync');
+        sandbox.stub(fs, 'writeFileSync');
+        
+        const result = await getFile(testUrl);
+
+        expect(typeof result.content).to.equal("object");
+    }
+)
 
     it('should handle errors during file operations', async () => {
         sandbox.stub(fs, 'existsSync').throws(new Error('File system error'));

@@ -3,11 +3,12 @@ import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import YAML from "yaml";
 import { fileURLToPath } from "url";
 
 /**
  * Gets content from a URL or file path, processes it, and returns the content or saves to temp directory if remote.
- * 
+ *
  * @async
  * @function getFile
  * @param {string} pathOrUrl - The URL or file path to get content from.
@@ -20,26 +21,20 @@ import { fileURLToPath } from "url";
 export async function getFile(pathOrUrl) {
   try {
     // Check if the input is a URL or file path
-    const isURL = pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://');
-    
+    const isURL =
+      pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://");
+
+    let content;
     if (isURL) {
       // Fetch content from URL
       const response = await axios.get(pathOrUrl);
-      let content = response.data;
-
-      // Convert content to string if it's an object
-      if (typeof content === "object") {
-        content = JSON.stringify(content, null, 2);
-      }
-        
-      return { result: "success", content, path: pathOrUrl };
+      content = response.data;
     } else {
       // Handle local file path
-      const currentFilePath = fileURLToPath(import.meta.url);
-      const currentDir = path.dirname(currentFilePath);
+      const currentDir = process.cwd();
       // Convert relative path to absolute if needed
-      const absolutePath = path.isAbsolute(pathOrUrl) 
-        ? pathOrUrl 
+      const absolutePath = path.isAbsolute(pathOrUrl)
+        ? pathOrUrl
         : path.resolve(currentDir, pathOrUrl);
 
       // Check if file exists
@@ -48,13 +43,20 @@ export async function getFile(pathOrUrl) {
       }
 
       // Read and return file content
-      const content = fs.readFileSync(absolutePath, 'utf8');
-      return { 
-        result: "success", 
-        path: absolutePath,
-        content
-      };
+      content = fs.readFileSync(absolutePath, "utf8");
+      pathOrUrl = absolutePath;
     }
+
+    if (typeof content === "string") {
+      // If file is YAML, parse it
+      if (pathOrUrl.endsWith(".yaml") || pathOrUrl.endsWith(".yml")) {
+        content = YAML.parse(content);
+      } else if (pathOrUrl.endsWith(".json")) {
+        // If file is JSON, parse it
+        content = JSON.parse(content);
+      }
+    }
+    return { result: "success", content, path: pathOrUrl };
   } catch (error) {
     // Return any errors encountered
     return { result: "error", message: error };
