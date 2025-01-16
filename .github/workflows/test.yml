@@ -18,6 +18,8 @@ jobs:
         
     - name: Install dependencies
       run: npm ci
+      env:
+        DOC_STRUCTURE_LINT_PRELOAD: 1        
       
     - name: Run tests
       run: npm test
