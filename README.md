@@ -29,16 +29,16 @@ A tool to validate Markdown document structure against specified templates, ensu
 npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
 ```
 
-Doc Structure Lint uses a _local_ language model to evaluate some parts of your templates and content. This model only takes about 2 GB of storage, and it's only downloaded once. When you run the tool for the first time, it may take a few minutes to download the language model. If you don't want to download the model during installation, set the `DOC_STRUCTURE_LINT_PRELOAD` environment variable to `0`. However, if you specify an `instructions` property in your template, the model will be downloaded regardless of the `DOC_STRUCTURE_LINT_PRELOAD` variable value.
+Doc Structure Lint uses a _local_ language model to evaluate the `instructions` rules of your templates. This model only takes about 2 GB of storage, and it's only downloaded once. The first time you run the tool with a template that uses `instructions`, it may take a few minutes to download the language model. If you want to preload the model during installation, set the `DOC_STRUCTURE_LINT_PRELOAD` environment variable to `1`.
 
 ```bash
-export DOC_STRUCTURE_LINT_PRELOAD=0 && npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
+export DOC_STRUCTURE_LINT_PRELOAD=1 && npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
 ```
 
 ### Options
 
-- `--file-path` or `-f`: Path to the Markdown document to validate
-- `--template-path` or `-p`: Path to the YAML template file (default: `./template.yaml`)
+- `--file-path` or `-f`: URL or path to the content to lint. Local paths can be individual files or directories.
+- `--template-path` or `-p`: URL or path to the template file (default: `./template.yaml`).
 - `--template` or `-t`: Name of the template to use
 - `--json`: Output results in JSON format
 
@@ -57,16 +57,16 @@ import { lintDocument } from "doc-structure-lint";
 
 async function validateDocument() {
   const result = await lintDocument({
-    file: "path/to/doc.md",
-    templatePath: "path/to/template.yaml",
-    template: "Template name",
+    file: "path/to/doc.md",  // Path or URL. Doesn't support directories.
+    templatePath: "path/to/template.yaml",  // Path or URL
+    template: "Template name",  // Name of the template to use
   });
 }
 ```
 
 ## Template Format
 
-Templates are defined in YAML and specify the structure and content requirements for your documents. Each template can contain multiple sections with various validation rules.
+Templates are defined in YAML (as shown here) or JSON and specify the structure and content requirements for your documents. Each template can contain multiple sections with various validation rules.
 
 Template definitions also support referencing with the `$ref` key, allowing you to reuse common section definitions across multiple templates.
 

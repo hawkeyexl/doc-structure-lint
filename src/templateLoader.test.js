@@ -44,7 +44,7 @@ templates:
             await loadAndValidateTemplates(nonExistentFile);
             expect.fail('Should have thrown an error');
         } catch (error) {
-            expect(error.message).to.include('Template file not found');
+            expect(error.message).to.include('Error reading template file');
         }
     });
 
