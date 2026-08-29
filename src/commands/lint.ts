@@ -72,6 +72,9 @@ export interface LintOptions {
   types?: Record<string, string>;
 }
 
+/** Extensions that make a bare `--template` value a filename, not a name. */
+const TEMPLATE_FILE_EXTENSIONS = [".yaml", ".yml", ".json"];
+
 /** `--templates` accepts one path or several; normalize to a list. */
 function templateFiles(value: string | string[] | undefined): string[] {
   if (value == null) return [];
@@ -180,6 +183,12 @@ function cliTemplateRef(
   if (template.includes("#")) return template;
   if (classifyRef(template).kind !== "file") return template;
   if (template.includes("/") || template.includes("\\")) return template;
+  // A bare filename names a file even without a separator: `--template
+  // custom.yaml` means that file, not a template called "custom.yaml" inside
+  // some other one.
+  if (TEMPLATE_FILE_EXTENSIONS.some((e) => template.toLowerCase().endsWith(e))) {
+    return template;
+  }
   if (templatePaths.length === 0) return template;
 
   // A bare name is a name inside a `--templates` file. Search them last-first,

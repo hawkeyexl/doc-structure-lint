@@ -102,10 +102,12 @@ function rebaseConfig(
   const config = found.config;
 
   const ref = (value: string): string => refRelativeTo(found.path, value);
+  // Every non-absolute glob is relative to the config, `**/*.md` included.
+  // Exempting a leading `**` left the original bug half-open: from a
+  // subdirectory that pattern expanded against the working directory, so a run
+  // checked a subset of the configured docset and still exited 0.
   const glob = (value: string): string =>
-    isAbsolute(value) || value.startsWith("**")
-      ? value
-      : resolvePath(dir, value).replace(/\\/g, "/");
+    isAbsolute(value) ? value : resolvePath(dir, value).replace(/\\/g, "/");
 
   return {
     ...config,
@@ -257,7 +259,10 @@ export function buildProgram(): Command {
         // same template files a lint would.
         const found = await loadConfig(options.config);
         const info = await runTemplates({
-          templates: options.templates ?? found?.config.templates,
+          // Rebased for the same reason the lint path is: this command answers
+          // "what could route a page?", so it must resolve the config's
+          // template paths exactly as a lint would.
+          templates: options.templates ?? rebaseConfig(found).templates,
         });
         const color = resolveColor(command.parent ?? command);
         process.stdout.write(`${renderTemplates(info, format, { color })}\n`);

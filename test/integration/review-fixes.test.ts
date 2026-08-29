@@ -298,3 +298,44 @@ describe("a directory whose name contains glob metacharacters", () => {
     expect(run.summary).toMatchObject({ checked: 1, passed: 1 });
   });
 });
+
+describe("a bare --template filename names a file", () => {
+  // `--template custom.yaml --templates routes.yaml` classified `custom.yaml`
+  // as a file but found no path separator in it, so it became
+  // `routes.yaml#custom.yaml` and looked for a template of that name.
+  it("is not rewritten into a fragment of --templates", async () => {
+    const custom = await file(
+      "custom.yaml",
+      [
+        "templates:",
+        "  only:",
+        "    sections:",
+        "      title:",
+        "        additionalSections: true",
+        "",
+      ].join("\n"),
+    );
+    const routes = await file(
+      "routes.yaml",
+      [
+        "templates:",
+        "  other:",
+        "    types: [other]",
+        "    sections:",
+        "      title:",
+        "        additionalSections: true",
+        "",
+      ].join("\n"),
+    );
+    await file("page.md", "# T\n\n## Anything\n");
+
+    const run = await runLint({
+      inputs: [join(dir, "page.md")],
+      template: custom,
+      templates: routes,
+      cwd: dir,
+    });
+    expect(run.results[0]!.template).toBe(custom);
+    expect(run.results[0]!.findings).toEqual([]);
+  });
+});

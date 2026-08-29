@@ -218,7 +218,7 @@ moose-lint formats
 | HTML | `.html`, `.htm` | `<meta>` and `<title>`, or fenced frontmatter |
 | AsciiDoc | `.adoc`, `.asciidoc` | the `:key: value` document header, or fenced frontmatter |
 | reStructuredText | `.rst` | the docinfo field list, or fenced frontmatter |
-| XML | `.xml`, `.dita` | root-element attributes |
+| XML | `.dita` in directory walks; `.xml` and `.dita` when named | root-element attributes |
 
 One template checks all of them. The same `tgdp:how-to:1.6` lints a Markdown
 page, an AsciiDoc page, and a DITA topic, and reports **the same findings** —
