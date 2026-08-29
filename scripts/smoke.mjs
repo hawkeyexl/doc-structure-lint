@@ -15,9 +15,9 @@
  * Usage: npm run smoke   (runs `build` first)
  */
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -26,9 +26,12 @@ const CLI = "dist/cli.js";
 let failures = 0;
 
 /** Run the built CLI and return `{ code, stdout, stderr }` without throwing. */
-async function cli(args) {
+async function cli(args, options = {}) {
+  // `cwd` matters for config discovery; the CLI path stays absolute so it
+  // resolves from wherever the run happens.
+  const cliPath = options.cwd ? resolve(CLI) : CLI;
   try {
-    const { stdout, stderr } = await run(process.execPath, [CLI, ...args]);
+    const { stdout, stderr } = await run(process.execPath, [cliPath, ...args], options);
     return { code: 0, stdout, stderr };
   } catch (err) {
     return { code: err.code ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
@@ -104,6 +107,69 @@ try {
     "an unknown type fails with a suggestion (exit 1)",
     unknown.code === 1 && unknown.stdout.includes("how-to"),
     unknown.stderr || unknown.stdout,
+  );
+
+  // SARIF is what a CI code-scanning upload consumes, so a malformed envelope
+  // is only discovered by whoever configured the upload.
+  const sarif = await cli([
+    "test/fixtures/tgdp/template_how-to.md",
+    "-t",
+    "tgdp:how-to:1.6",
+    "-f",
+    "sarif",
+  ]);
+  let sarifOk = false;
+  try {
+    const doc = JSON.parse(sarif.stdout);
+    sarifOk =
+      doc.version === "2.1.0" &&
+      Array.isArray(doc.runs) &&
+      doc.runs[0]?.tool?.driver?.name === "moose-lint";
+  } catch {
+    sarifOk = false;
+  }
+  check("-f sarif emits a well-formed SARIF 2.1.0 document", sarifOk, sarif.stderr || sarif.stdout);
+
+  // Config discovery walks up from the working directory, which only exercises
+  // the real path when the CLI is run from somewhere other than the repo root.
+  const configured = join(dir, "docs");
+  await mkdir(configured, { recursive: true });
+  await writeFile(
+    join(dir, "moose.config.yaml"),
+    [
+      "meta:",
+      '  schemas: ["google:okf:0.1"]',
+      "",
+      "lint:",
+      '  paths: ["docs/**/*.md"]',
+      "",
+    ].join("\n"),
+  );
+  await writeFile(
+    join(configured, "page.md"),
+    [
+      "---",
+      "type: how-to",
+      "title: Do it",
+      "---",
+      "",
+      "## Overview",
+      "",
+      "Why.",
+      "",
+      "## Step",
+      "",
+      "How.",
+      "",
+      "## See also",
+      "",
+    ].join("\n"),
+  );
+  const fromConfig = await cli([], { cwd: dir });
+  check(
+    "a bare run takes its targets from moose.config.yaml, ignoring sibling keys",
+    fromConfig.code === 0 && fromConfig.stdout.includes("1 passed"),
+    fromConfig.stderr || fromConfig.stdout,
   );
 
   const missing = await cli(["no-such-file.md", "-t", "tgdp:how-to:1.6"]);

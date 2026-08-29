@@ -49,8 +49,12 @@ export interface LintOptions {
   inputs: string[];
   /** `--template`: a built-in id, a path, or a name inside `templates`. */
   template?: string;
-  /** `--templates`: a template file to resolve `template` as a name within. */
-  templates?: string;
+  /**
+   * `--templates`: template files whose `types:` join the routing table. A bare
+   * `--template <name>` is resolved as a name inside the first of them, which is
+   * the pairing the moose-docevals adapter invokes.
+   */
+  templates?: string | string[];
   /** `--as`: force an input format, by parser name. */
   as?: string;
   /** `--exclude`: globs removed from directory/glob expansion. */
@@ -64,6 +68,14 @@ export interface LintOptions {
   overrides?: TemplateOverride[];
   /** Config default, applied when a page declares no doctype. */
   defaultTemplate?: string;
+  /** Config's explicit doctype -> template ref map. */
+  types?: Record<string, string>;
+}
+
+/** `--templates` accepts one path or several; normalize to a list. */
+function templateFiles(value: string | string[] | undefined): string[] {
+  if (value == null) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 export interface LintSummary {
@@ -324,19 +336,21 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
   // The doctype -> template map. Built-ins go in first and user templates
   // overwrite them, so overriding `how-to` for a repo is one file with
   // `types: [how-to]` in it - no config entry, no flag.
+  const templatePaths = templateFiles(opts.templates);
   const userFiles: { ref: string; file: TemplateFile }[] = [];
-  if (opts.templates != null) {
-    userFiles.push({
-      ref: opts.templates,
-      file: await loadTemplateFile(opts.templates),
-    });
+  for (const ref of templatePaths) {
+    userFiles.push({ ref, file: await loadTemplateFile(ref) });
   }
-  const typeIndex = buildTypeIndex({ builtins: listBuiltins(), userFiles });
+  const typeIndex = buildTypeIndex({
+    builtins: listBuiltins(),
+    userFiles,
+    explicitTypes: opts.types,
+  });
 
   const ctx: LintContext = {
     getTemplate: templateLoader(),
     typeIndex,
-    cliTemplate: cliTemplateRef(opts.template, opts.templates),
+    cliTemplate: cliTemplateRef(opts.template, templatePaths[0]),
     overrides: opts.overrides,
     defaultTemplate: opts.defaultTemplate,
     explain: opts.explain === true,

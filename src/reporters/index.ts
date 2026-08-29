@@ -8,8 +8,9 @@ import type { LintRun } from "../commands/lint.js";
 import type { FormatInfo } from "../commands/formats.js";
 import type { TemplateInfo, TemplatesInfo } from "../commands/templates.js";
 import { palette, type Colors } from "./color.js";
+import { renderSarif } from "./sarif.js";
 
-export type ReportFormat = "pretty" | "json" | "github" | "explain";
+export type ReportFormat = "pretty" | "json" | "github" | "explain" | "sarif";
 
 /** Listing commands have nothing to annotate, so they offer no `github`. */
 export type ListFormat = "pretty" | "json";
@@ -177,6 +178,8 @@ export function render(
       return renderJson(run);
     case "github":
       return renderGithub(run);
+    case "sarif":
+      return renderSarif(run);
     case "explain":
       return renderExplain(run, opts);
     case "pretty":

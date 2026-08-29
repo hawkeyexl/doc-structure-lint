@@ -92,9 +92,8 @@ Highest precedence first:
 | 4 | the page's `type` | what the page says it is |
 | 5 | a configured default | what to assume when a page says nothing |
 
-Steps 3 and 5 are policy the linter applies but that nothing writes yet:
-`moose.config.yaml` lands in a later release. Until then, routing is steps 1, 2,
-and 4.
+Steps 3 and 5 are repo policy, written in
+[`moose.config.yaml`](#configuration).
 
 ### A missing `type` and an unknown one are different
 
@@ -171,8 +170,9 @@ configuration, not about the documents.
 
 ```
 moose-lint [paths...]   Lint, routing each page by its `type`. -t/--template <ref>,
-                        --templates <path>, --explain, --as <format>,
-                        --exclude <glob...>, -f/--format <pretty|json|github>, --no-color
+                        --templates <path...>, -c/--config <path>, --explain,
+                        --as <format>, --exclude <glob...>,
+                        -f/--format <pretty|json|github|sarif>, --no-color
 moose-lint templates    List resolvable templates and the doctypes they serve
 moose-lint formats      List input formats, implemented and planned
 ```
@@ -437,6 +437,59 @@ and never marks it optional, so the derived template requires it — and plenty 
 real how-tos have none. Rather than substitute our judgment for TGDP's, relaxing
 it is the worked [`extends` example](#reuse): one file, four lines.
 
+## Configuration
+
+Optional. A repo whose pages all declare their `type` needs none.
+
+Settings live in **`moose.config.yaml`**, one file shared by the whole moose
+family, with one top-level key per tool. `moose-lint` reads `lint:` and neither
+reads nor validates anything else, so the file grows as you adopt more of the
+family without any tool needing to know about the others.
+
+```yaml
+# moose.config.yaml
+meta:                                # moose-meta's section; moose-lint ignores it
+  schemas: ["google:okf:0.1"]
+
+lint:
+  paths: ["docs/**/*.md"]            # targets when none are given on the command line
+  exclude: ["**/drafts/**"]          # added to the built-in node_modules/.git defaults
+  templates: ["./templates.yaml"]    # your templates; their `types:` join the routing table
+  template: tgdp:how-to:1.6          # what to assume when a page declares no type
+  types:                             # an explicit doctype -> template mapping
+    api-operation: ./templates.yaml#api-operation
+  overrides:                         # repo policy; first matching glob wins
+    - files: "docs/api/**"
+      template: tgdp:reference:1.6
+```
+
+With that in place, CI runs a bare `moose-lint`.
+
+Discovery walks up from the working directory to the repository root, so it
+works from a subdirectory. `-c/--config <path>` names a file directly and skips
+discovery.
+
+Command-line flags win over the file, with one exception: `--exclude`
+**accumulates** with the configured excludes rather than replacing them, because
+narrowing a run should not quietly discard the repo's standing exclusions.
+
+### What fails loudly
+
+Validation inside `lint:` is strict — unknown keys are an error, not a silent
+default. Beyond that, four shapes are rejected rather than defaulted through,
+because each one silently discards a whole configuration:
+
+| shape | why it is not just "no config" |
+| --- | --- |
+| keys at the top level with no `lint:` | the un-nested file: your settings are present and unread |
+| a `Lint:` wrapper differing only in case | the keys are nested, so the check above cannot see them |
+| a `doc-structure-lint.config.yaml` and no `moose.config.yaml` | the un-renamed file, left behind by the rename |
+| a `moose.config.yaml` that exists but cannot be read | a directory by that name, a permissions problem |
+
+A file that is absent, empty, or that carries only other tools' sections is not
+an error. That is what keeps a shared file usable by a project that has not
+adopted this tool yet.
+
 ## Using it as a library
 
 ```javascript
@@ -447,10 +500,30 @@ const run = await runLint({ inputs: ["docs/"] });
 ```
 
 `template` and `templates` are optional and mirror `--template` and
-`--templates`.
+`--templates`. `runLint` reads no configuration file — it is a function of the
+options you hand it, so a library caller is never surprised by a file on disk.
+Call `loadConfig()` yourself if you want the file.
 
-`-f json` emits `[{ file, success, errors: [{ type, heading, message, position }] }]`,
-which is what tool adapters parse.
+## Output formats
+
+| `-f` | for |
+| --- | --- |
+| `pretty` | reading. The default. |
+| `json` | tool adapters: `[{ file, success, errors: [{ type, heading, message, position }] }]` |
+| `github` | `::error file=…,line=…,col=…::` annotations, inline on a pull request |
+| `sarif` | code-scanning uploads — SARIF 2.1.0, one rule descriptor per finding type |
+
+The SARIF output declares every finding type in `tool.driver.rules` and
+references it by both `ruleId` and `ruleIndex`, so alerts group and filter
+properly rather than arriving as a flat list. Paths are relative and
+forward-slashed against a declared `SRCROOT`, on Windows as well as Linux.
+Skipped files become `note`-level notifications rather than results: a skip is a
+statement about the tool, which declined to look, not about the document — as
+results they would open alerts on files nothing examined.
+
+```bash
+moose-lint docs/ -f sarif > moose-lint.sarif
+```
 
 ## Migrating from `doc-structure-lint`
 
@@ -487,10 +560,17 @@ is what turns a per-doctype run into one run over the whole tree — see
 npm install
 npm test
 npm run typecheck
+npm run smoke            # build, then exercise the real dist/cli.js
 npm run check:tgdp-pin   # has upstream moved past the built-ins' pin?
 ```
 
-Decisions are recorded in [`adrs/`](adrs/).
+`npm run smoke` exists because the suite runs against `src/`, where the built-in
+templates sit one directory deeper than they do in the bundled `dist/`. A path
+that is right in the repo and wrong in the package passes every test — which is
+how it happened once.
+
+Decisions are recorded in [`adrs/`](adrs/), and the conventions this rewrite
+settled on are in [`CLAUDE.md`](CLAUDE.md).
 
 ## License
 

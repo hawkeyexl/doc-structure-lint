@@ -19,6 +19,7 @@ import pkg from "../package.json" with { type: "json" };
 import { MooseLintError } from "./types.js";
 import { runLint } from "./commands/lint.js";
 import { runTemplates } from "./commands/templates.js";
+import { loadConfig } from "./core/config.js";
 import { runFormats } from "./commands/formats.js";
 import {
   render,
@@ -29,7 +30,10 @@ import {
 } from "./reporters/index.js";
 import { shouldColor } from "./reporters/color.js";
 
-const REPORT_FORMATS = new Set<string>(["pretty", "json", "github"]);
+// `explain` is reachable through `--explain`, not `-f`: it reports on
+// configuration rather than on documents, and offering it as a format would
+// invite `-f explain` alongside a lint that then never happens.
+const REPORT_FORMATS = new Set<string>(["pretty", "json", "github", "sarif"]);
 const LIST_FORMATS = new Set<string>(["pretty", "json"]);
 
 async function readStdin(): Promise<string> {
@@ -57,7 +61,7 @@ function reportFormat(value: unknown): ReportFormat {
   const format = String(value);
   if (!REPORT_FORMATS.has(format)) {
     throw new MooseLintError(
-      `Unknown --format "${format}". Use pretty, json, or github.`,
+      `Unknown --format "${format}". Use pretty, json, github, or sarif.`,
     );
   }
   return format as ReportFormat;
@@ -106,9 +110,10 @@ export function buildProgram(): Command {
       "apply this template to every file, overriding type routing",
     )
     .option(
-      "--templates <path>",
-      "template file to route by: its templates' `types:` win over built-ins",
+      "--templates <path...>",
+      "template files to route by: their `types:` win over built-ins; repeatable",
     )
+    .option("-c, --config <path>", "path to moose.config.yaml")
     .option(
       "--explain",
       "print how each file's template was chosen, and lint nothing",
@@ -118,7 +123,11 @@ export function buildProgram(): Command {
       "--exclude <glob...>",
       "globs to exclude from directory/glob expansion; repeatable",
     )
-    .option("-f, --format <format>", "output: pretty | json | github", "pretty")
+    .option(
+      "-f, --format <format>",
+      "output: pretty | json | github | sarif",
+      "pretty",
+    )
     .addHelpText(
       "after",
       [
@@ -126,6 +135,7 @@ export function buildProgram(): Command {
         "Examples:",
         "  moose-lint docs/                               # route each page by its `type`",
         "  moose-lint docs/ --templates ./templates.yaml  # add your own templates",
+        "  moose-lint                                     # targets from moose.config.yaml",
         "  moose-lint docs/ --explain                     # show why each page routed where",
         "  moose-lint page.md -t tgdp:how-to:1.6          # force one template",
         '  moose-lint "**/*.md" -f github                 # CI annotations',
@@ -141,12 +151,27 @@ export function buildProgram(): Command {
           : undefined;
 
         const explain = options.explain === true;
+        // Config is read here rather than inside the command core, so that
+        // `runLint` stays a pure function of the options it is handed and a
+        // library caller is never surprised by a file on disk.
+        const found = await loadConfig(options.config);
+        const config = found?.config ?? {};
+
         const run = await runLint({
-          inputs: paths,
+          // Positional paths win; `paths:` is the fallback that lets CI run a
+          // bare `moose-lint`.
+          inputs: paths.length > 0 ? paths : (config.paths ?? []),
           template: options.template,
-          templates: options.templates,
+          templates: options.templates ?? config.templates,
           as: options.as,
-          exclude: options.exclude,
+          // Excludes accumulate rather than replace: a flag narrows a run
+          // further, it does not discard the repo's standing exclusions.
+          exclude: [...(config.exclude ?? []), ...(options.exclude ?? [])],
+          types: config.types,
+          overrides: config.overrides,
+          // `template:` in config is the default for a page that declares no
+          // type - the bottom of the chain, not the top. `--template` is the top.
+          defaultTemplate: config.template,
           explain,
           stdinContent,
         });
