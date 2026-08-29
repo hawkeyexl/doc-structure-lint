@@ -77,7 +77,12 @@ async function walkDirectory(
 ): Promise<string[]> {
   const base = toPosix(relative(cwd, abs));
   const anchorAtDir = base === "" || base.startsWith("..");
-  const found = await fg(anchorAtDir ? "**/*" : `${base}/**/*`, {
+  // `base` is a real path, not a pattern, so its `(`, `)`, `[`, `!`, `+`, `@`
+  // are literal characters - and every one of them is a glob metacharacter.
+  // Interpolating it raw makes an ordinary directory (`docs (2024)`,
+  // `Program Files (x86)`) match nothing, which surfaces as "matched no files"
+  // and exit 2 rather than as anything pointing at the real cause.
+  const found = await fg(anchorAtDir ? "**/*" : `${fg.escapePath(base)}/**/*`, {
     cwd: anchorAtDir ? abs : cwd,
     ignore,
     onlyFiles: true,

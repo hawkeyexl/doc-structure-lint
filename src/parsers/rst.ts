@@ -90,7 +90,11 @@ import type {
 } from "../types.js";
 import type { Block } from "./sectionize.js";
 import { sectionize } from "./sectionize.js";
-import { fencedPosition, withMetadataTitle as withFrontmatterTitle } from "./metadata.js";
+import {
+  fencedPosition,
+  withMetadataTitle as withFrontmatterTitle,
+  withoutFence,
+} from "./metadata.js";
 
 /** Every character the spec allows as title adornment. */
 const ADORNMENT_CHARS = new Set(
@@ -732,7 +736,13 @@ interface Metadata {
  */
 function readMetadata(content: string, filePath: string, src: Source): Metadata {
   const fenced = extractFrontmatter(content, "rst");
-  const native = extractorForExtension(".rst")?.extract(content, filePath);
+  // Read the docinfo field list from the fence-free remainder: docmeta's reST
+  // extractor returns the fence and stops when one is present, so asking it
+  // about the whole file would discard `:type:` on any page that has both.
+  const native = extractorForExtension(".rst")?.extract(
+    fenced.present ? withoutFence(content) : content,
+    filePath,
+  );
 
   if (!fenced.present && !native?.present) {
     return { frontmatter: null, position: null, bodyStart: 0 };
@@ -745,7 +755,17 @@ function readMetadata(content: string, filePath: string, src: Source): Metadata 
       ...(fenced.present ? fenced.data : {}),
     },
     position: fenced.present ? fencedPosition(content) : docinfoPosition(src),
-    bodyStart: loc ? src.starts.findIndex((start) => start >= loc.closeEnd) : 0,
+    // `findIndex` returns -1 when no line starts at or after the closing fence,
+    // i.e. the fence is the last thing in the file. `Math.max(-1, 0)` used to
+    // launder that into line 0, restarting the scan inside the frontmatter and
+    // reading the YAML as body prose - the exact thing `bodyStart` exists to
+    // prevent. There is no body in that case, so start past the last line.
+    bodyStart: loc
+      ? (() => {
+          const i = src.starts.findIndex((start) => start >= loc.closeEnd);
+          return i === -1 ? src.starts.length : i;
+        })()
+      : 0,
   };
 }
 

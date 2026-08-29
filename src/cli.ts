@@ -19,7 +19,9 @@ import pkg from "../package.json" with { type: "json" };
 import { MooseLintError } from "./types.js";
 import { runLint } from "./commands/lint.js";
 import { runTemplates } from "./commands/templates.js";
-import { loadConfig } from "./core/config.js";
+import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
+import { loadConfig, type LintConfig } from "./core/config.js";
+import { refRelativeTo } from "./core/template-registry.js";
 import { runFormats } from "./commands/formats.js";
 import {
   render,
@@ -75,6 +77,61 @@ function listFormat(value: unknown): ListFormat {
     );
   }
   return format as ListFormat;
+}
+
+/**
+ * Re-base everything a config declares against the config file's own directory.
+ *
+ * `loadConfig` returns the file's `path` precisely so this can happen, and
+ * discarding it made the same config mean different things depending on where
+ * the tool was invoked from. Running from a subdirectory turned `templates:`
+ * into "file not found" and `paths:` into "nothing to lint" - and turned
+ * `overrides:` into nothing at all, silently: the glob stopped matching, every
+ * page fell through to its own `type`, and the run exited 0 having applied none
+ * of the repo's policy.
+ *
+ * Refs go through `refRelativeTo`, which leaves built-in ids, URLs, and
+ * absolute paths alone. Globs become absolute, which is what `runLint` matches
+ * them against.
+ */
+function rebaseConfig(
+  found: { config: LintConfig; path: string } | null,
+): LintConfig {
+  if (!found) return {};
+  const dir = dirname(resolvePath(found.path));
+  const config = found.config;
+
+  const ref = (value: string): string => refRelativeTo(found.path, value);
+  const glob = (value: string): string =>
+    isAbsolute(value) || value.startsWith("**")
+      ? value
+      : resolvePath(dir, value).replace(/\\/g, "/");
+
+  return {
+    ...config,
+    ...(config.paths ? { paths: config.paths.map(glob) } : {}),
+    ...(config.exclude ? { exclude: config.exclude.map(glob) } : {}),
+    ...(config.templates ? { templates: config.templates.map(ref) } : {}),
+    ...(config.template ? { template: ref(config.template) } : {}),
+    ...(config.types
+      ? {
+          types: Object.fromEntries(
+            Object.entries(config.types).map(([type, value]) => [
+              type,
+              ref(value),
+            ]),
+          ),
+        }
+      : {}),
+    ...(config.overrides
+      ? {
+          overrides: config.overrides.map((o) => ({
+            files: glob(o.files),
+            template: ref(o.template),
+          })),
+        }
+      : {}),
+  };
 }
 
 export function buildProgram(): Command {
@@ -155,7 +212,7 @@ export function buildProgram(): Command {
         // `runLint` stays a pure function of the options it is handed and a
         // library caller is never surprised by a file on disk.
         const found = await loadConfig(options.config);
-        const config = found?.config ?? {};
+        const config = rebaseConfig(found);
 
         const run = await runLint({
           // Positional paths win; `paths:` is the fallback that lets CI run a

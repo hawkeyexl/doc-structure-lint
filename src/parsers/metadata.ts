@@ -68,3 +68,21 @@ export function withMetadataTitle(
 
   return [{ type: "heading", level: 1, title, position }, ...blocks];
 }
+
+/**
+ * The content with a leading fenced metadata block removed.
+ *
+ * docmeta's AsciiDoc and reStructuredText extractors short-circuit: when a
+ * fence is present they return it and never look at the format's own metadata.
+ * So a page carrying both a `---` fence and a native `:type: how-to` header
+ * lost the `type` entirely and was skipped as untyped - while the same page in
+ * HTML, whose extractor has no such branch, routed correctly. Running the
+ * native extractor over the fence-free remainder is what lets both be read.
+ *
+ * Only the values are taken from that second read; positions would be shifted
+ * by the removal and are not used.
+ */
+export function withoutFence(content: string): string {
+  const loc = locateFrontmatter(content);
+  return loc ? content.slice(loc.closeEnd) : content;
+}

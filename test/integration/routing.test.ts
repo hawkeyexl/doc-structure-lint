@@ -81,12 +81,35 @@ describe("routing a directory of mixed doctypes", () => {
 });
 
 describe("a page with no type", () => {
-  it("is skipped and does not fail the run", async () => {
+  it("is skipped rather than failed", async () => {
     await file("untyped.md", "# Just a page\n\nProse.\n");
+    await file("guide.md", typed("how-to"));
     const run = await runLint({ inputs: [dir], cwd: dir });
 
-    expect(run.summary).toMatchObject({ checked: 0, failed: 0, skipped: 1 });
-    expect(run.results[0]).toMatchObject({ skipped: "no-template", template: null });
+    const untyped = run.results.find((r) => r.file.endsWith("untyped.md"));
+    expect(untyped).toMatchObject({ skipped: "no-template", template: null });
+    expect(run.summary).toMatchObject({ failed: 0 });
+  });
+
+  // A run that finds files and checks none of them exits 0 and reads as a clean
+  // bill of health for a docset nothing looked at - a permanently green CI job
+  // for any repo that adopts the tool before backfilling `type:` keys. The
+  // guard that used to cover this tested the type index before any file was
+  // read, and could never fire, because the index is always seeded with the
+  // built-ins.
+  it("fails the run when it is the only page and nothing else routes", async () => {
+    await file("untyped.md", "# Just a page\n\nProse.\n");
+    await expect(runLint({ inputs: [dir], cwd: dir })).rejects.toThrow(
+      /Nothing was checked/,
+    );
+  });
+
+  // `--explain` exists to show why nothing routed, so it must survive the case.
+  it("still explains when nothing routed", async () => {
+    await file("untyped.md", "# Just a page\n");
+    const run = await runLint({ inputs: [dir], explain: true, cwd: dir });
+    expect(run.summary).toMatchObject({ checked: 0, skipped: 1 });
+    expect(run.results[0]!.resolution?.cause).toBe("no-type");
   });
 
   // The point of skipping: a repo that has typed three pages out of two hundred

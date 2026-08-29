@@ -209,17 +209,29 @@ function codeNode(pre: Element): CodeNode {
   };
 }
 
-/** `<li>` children of a list, with their own content mapped recursively. */
+/**
+ * `<li>` children of a list, with their own content mapped recursively.
+ *
+ * An item whose text is not wrapped in a block element gets a synthesized
+ * paragraph, because mdast puts a list item's principal text in a paragraph
+ * child and `lists: {items: {paragraphs: {min: 1}}}` has to count the same
+ * thing in every format. Without it `<li>text</li>` had no children at all
+ * while its Markdown, AsciiDoc, and reStructuredText twins had one - and
+ * `<li><p>text</p></li>` in the same document had one too, so the rule did not
+ * even mean one thing within HTML.
+ */
 function listItems(list: Element): ListItemNode[] {
   const items: ListItemNode[] = [];
   for (const child of list.childNodes) {
     if (!defaultTreeAdapter.isElementNode(child)) continue;
     if (tagOf(child) !== "li") continue;
-    items.push({
-      position: positionOf(child),
-      text: flatText(child),
-      children: contentIn(child),
-    });
+
+    const text = flatText(child);
+    const children = contentIn(child);
+    if (children.length === 0 && text.length > 0) {
+      children.push({ kind: "paragraph", position: positionOf(child), text });
+    }
+    items.push({ position: positionOf(child), text, children });
   }
   return items;
 }
@@ -367,8 +379,26 @@ function metadataOf(
   // and a finding about the page's metadata belongs there.
   if (fenced.present) return { frontmatter, position: fencedPosition(content) };
 
+  // A `<head>` parse5 synthesized carries no source location. That happens
+  // whenever anything precedes `<html>` - a BOM is the common case - and it
+  // used to yield a null position, which silently switched off the synthetic
+  // frontmatter title: `withMetadataTitle` bails when the position is null, so
+  // the document lost its top-level section and every doctype template
+  // misaligned against it. The metadata is real either way, so fall back to the
+  // top of the file rather than disowning it.
   const head = findHead(doc);
-  return { frontmatter, position: head?.sourceCodeLocation ? positionOf(head) : null };
+  return {
+    frontmatter,
+    position: head?.sourceCodeLocation ? positionOf(head) : origin(),
+  };
+}
+
+/** Zero-width span at the top of the file, for metadata with no located block. */
+function origin(): Position {
+  return {
+    start: { line: 1, column: 1, offset: 0 },
+    end: { line: 1, column: 1, offset: 0 },
+  };
 }
 
 /** The document's `<head>`, when the source actually wrote one. */

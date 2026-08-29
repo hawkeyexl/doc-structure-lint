@@ -108,6 +108,22 @@ An untyped page is `moose-meta`'s complaint, not this tool's — its OKF schema
 already requires `type`. Skipping is what lets you point `moose-lint` at a whole
 tree on day one, when three pages out of two hundred are typed.
 
+**Unless nothing at all was checked.** A run that finds files and checks none of
+them exits `2`, because a linter that looked at nothing is indistinguishable
+from a clean docset once it exits `0` — and a repo that adopts `moose-lint` in
+CI before backfilling `type:` keys would get a permanently green job over an
+unchecked tree.
+
+```text
+moose-lint: Nothing was checked: all 12 file(s) were skipped. Give a page a
+"type:" that a template serves, pass -t/--template <ref>, or set
+"lint.template" as a default. Run "moose-lint <paths> --explain" to see how
+each file resolved.
+```
+
+One checked file is enough to make the rest ordinary skips. `--explain` is
+exempt: showing why nothing routed is exactly its job.
+
 A page whose `type` **resolves to no template** is an **error**: exit `1`, with
 near misses named.
 

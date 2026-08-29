@@ -39,7 +39,11 @@ import type {
 import { MooseLintError } from "../types.js";
 import type { Block } from "./sectionize.js";
 import { sectionize } from "./sectionize.js";
-import { fencedPosition, withMetadataTitle as withFrontmatterTitle } from "./metadata.js";
+import {
+  fencedPosition,
+  withMetadataTitle as withFrontmatterTitle,
+  withoutFence,
+} from "./metadata.js";
 
 /**
  * `asciidoctor` is CommonJS whose `module.exports` *is* the factory function,
@@ -469,7 +473,13 @@ function headerPosition(content: string, index: LineIndex): Position | null {
  */
 function metadata(content: string, filePath: string, index: LineIndex): Metadata {
   const fenced = extractFrontmatter(content, "asciidoc");
-  const native = nativeExtractor?.extract(content, filePath);
+  // Read the native header from the fence-free remainder: docmeta's AsciiDoc
+  // extractor returns the fence and stops when one is present, so asking it
+  // about the whole file would discard `:type:` on any page that has both.
+  const native = nativeExtractor?.extract(
+    fenced.present ? withoutFence(content) : content,
+    filePath,
+  );
 
   if (!fenced.present && !native?.present) return { data: null, position: null };
 

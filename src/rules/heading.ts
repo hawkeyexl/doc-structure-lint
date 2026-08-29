@@ -3,6 +3,7 @@
  */
 
 import type { Finding, SectionNode } from "../types.js";
+import { compilePattern } from "./index.js";
 import type { HeadingRule } from "./index.js";
 
 /**
@@ -32,7 +33,7 @@ export function checkHeading(
     });
   }
 
-  if (rule.pattern && !new RegExp(rule.pattern).test(section.title)) {
+  if (rule.pattern && !compilePattern(rule.pattern).test(section.title)) {
     findings.push({
       type: "heading_pattern_error",
       heading: section.title,

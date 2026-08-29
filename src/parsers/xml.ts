@@ -569,13 +569,25 @@ class Flattener {
         ordered,
         items: [...elementChildren(el)]
           .filter((item) => this.c.items.has(localName(item)))
-          .map(
-            (item): ListItemNode => ({
-              position: this.span(item),
-              text: flatten(item.textContent),
-              children: this.contentChildren(item),
-            }),
-          ),
+          .map((item): ListItemNode => {
+            const itemPosition = this.span(item);
+            const itemText = flatten(item.textContent);
+            const children = this.contentChildren(item);
+            // An item whose text is not wrapped in a mapped element gets a
+            // synthesized paragraph. mdast puts a list item's principal text in
+            // a paragraph child, and `lists: {items: {paragraphs: {min: 1}}}`
+            // has to count the same thing in every format - a DITA `<li>bare
+            // text</li>` otherwise had no children where its Markdown twin had
+            // one.
+            if (children.length === 0 && itemText.length > 0) {
+              children.push({
+                kind: "paragraph",
+                position: itemPosition,
+                text: itemText,
+              });
+            }
+            return { position: itemPosition, text: itemText, children };
+          }),
       };
     }
 
@@ -800,6 +812,14 @@ export const xmlParser: DocumentParser = {
    * page and has no doctype to check.
    */
   extensions: [".xml", ".dita"],
+  /**
+   * A directory walk collects `.dita` but not `.xml`. A `.dita` file is a
+   * documentation topic by definition; `.xml` is a container a repository uses
+   * for build files, sitemaps, and project metadata, none of which match a
+   * documentation vocabulary. Sweeping those in made one `pom.xml` fail an
+   * otherwise clean tree. Naming an `.xml` file explicitly still parses it.
+   */
+  walkExtensions: [".dita"],
   implemented: true,
   parse: (content, filePath) => parseXml(content, filePath),
 };

@@ -53,7 +53,9 @@ export function parserByName(name: string): DocumentParser | undefined {
 
 /** Extensions handled by implemented parsers. Used for directory walks. */
 export function supportedExtensions(): string[] {
-  return PARSERS.filter((p) => p.implemented).flatMap((p) => p.extensions);
+  return PARSERS.filter((p) => p.implemented).flatMap(
+    (p) => p.walkExtensions ?? p.extensions,
+  );
 }
 
 /** Every registered format, for `moose-lint formats`. */

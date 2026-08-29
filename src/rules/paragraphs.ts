@@ -5,6 +5,7 @@
 import { MooseLintError } from "../types.js";
 import type { ContentNode, Finding, ParagraphNode, SectionNode } from "../types.js";
 import {
+  compilePattern,
   paragraphsOf,
   sectionContext,
   type ParagraphsRule,
@@ -93,12 +94,5 @@ function checkPatterns(
 
 /** A pattern that will not compile is a broken template, not a lint finding. */
 function compilePatterns(patterns: string[]): RegExp[] {
-  return patterns.map((pattern) => {
-    try {
-      return new RegExp(pattern);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      throw new MooseLintError(`Invalid pattern "${pattern}": ${reason}`);
-    }
-  });
+  return patterns.map(compilePattern);
 }

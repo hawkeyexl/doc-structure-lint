@@ -93,11 +93,22 @@ try {
 
   const untyped = join(dir, "untyped.md");
   await writeFile(untyped, "# No type here\n");
-  const skipped = await cli([untyped]);
+  const skipped = await cli([untyped, typed]);
   check(
-    "an untyped page is skipped, not failed (exit 0)",
+    "an untyped page beside a typed one is skipped, not failed (exit 0)",
     skipped.code === 0 && skipped.stdout.includes("skipped"),
     skipped.stderr || skipped.stdout,
+  );
+
+  // The other half of the same contract: a run that finds files and checks none
+  // of them must not exit 0, or a repo adopting the tool before backfilling
+  // `type:` keys gets a permanently green CI job over an unchecked docset.
+  const nothingChecked = await cli([untyped]);
+  check(
+    "a run that checks nothing fails loudly (exit 2)",
+    nothingChecked.code === 2 &&
+      nothingChecked.stderr.includes("Nothing was checked"),
+    nothingChecked.stdout || nothingChecked.stderr,
   );
 
   const mistyped = join(dir, "mistyped.md");

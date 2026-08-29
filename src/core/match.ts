@@ -125,14 +125,28 @@ function enoughSectionsRemain(
   return sectionsRemaining >= required;
 }
 
-/** First index at or after `from` whose section satisfies `rule`. */
+/**
+ * First index at or after `from` whose section satisfies `rule` - but never
+ * scanning past a section some later rule could claim.
+ *
+ * Scanning ahead is how sections that appear before an expected one get
+ * absorbed as extras. Unbounded, it strands the ones that belong to later
+ * rules: an optional rule matching near the end of the document would mark
+ * every section in between as extra, including the section a later *required*
+ * rule was going to match, which then reports as missing as well. That is one
+ * misplaced heading producing both `missing_section` and `unexpected_section`
+ * for the same title - the cascade this matcher exists to avoid.
+ */
 function findForward(
   sections: SectionNode[],
   from: number,
   rule: TemplateSection,
+  rules: Rule[],
+  ri: number,
 ): number {
   for (let i = from; i < sections.length; i++) {
     if (headingMatches(sections[i]!.title, rule)) return i;
+    if (claimedLater(rules, ri + 1, sections[i]!)) return -1;
   }
   return -1;
 }
@@ -211,7 +225,7 @@ export function matchSections(
     const at =
       cursor < sections.length && headingMatches(sections[cursor]!.title, rule)
         ? cursor
-        : findForward(sections, cursor, rule);
+        : findForward(sections, cursor, rule, rules, ri);
 
     if (at !== -1) {
       for (let i = cursor; i < at; i++) extras.push(sections[i]!);
@@ -222,7 +236,13 @@ export function matchSections(
       } while (
         rule.repeat === true &&
         cursor < sections.length &&
-        headingMatches(sections[cursor]!.title, rule)
+        headingMatches(sections[cursor]!.title, rule) &&
+        // The same guard the slot branch applies. Without it a repeating rule
+        // whose pattern also matches a later rule's heading consumes that
+        // section too, and then validates it against the wrong subsections -
+        // so the later rule reports missing and the stolen section reports
+        // whatever the repeating rule required of it.
+        !claimedLater(rules, ri + 1, sections[cursor]!)
       );
       continue;
     }
