@@ -56,15 +56,34 @@ async function statOrNull(p: string) {
 }
 
 /**
- * The recursive glob for a directory input, expressed relative to `cwd`.
+ * Walk a directory recursively, honoring the ignore globs.
  *
- * fast-glob patterns are resolved against `cwd`, so an absolute directory
- * argument - or a Windows path with backslashes - has to be relativized first
- * or the pattern matches nothing at all.
+ * fast-glob patterns are resolved against `cwd`, so a directory argument has
+ * to be relativized first - and a directory *outside* cwd relativizes to a
+ * `../` chain. That form quietly breaks every ignore glob: a leading wildcard
+ * will not cross a path segment beginning with a dot, and `..` is such a
+ * segment, so the node_modules and .git defaults - and every user `--exclude` -
+ * stop matching the returned entries. So the walk is anchored at the directory
+ * itself whenever the cwd-relative pattern would escape cwd, which keeps the
+ * entries, and therefore the ignores, well formed. A directory under cwd keeps
+ * the cwd-relative pattern, so a cwd-relative `--exclude` still works there.
+ *
+ * Returns absolute paths; the caller decides how to display them.
  */
-function dirPattern(cwd: string, abs: string): string {
+async function walkDirectory(
+  cwd: string,
+  abs: string,
+  ignore: string[],
+): Promise<string[]> {
   const base = toPosix(relative(cwd, abs));
-  return base === "" || base === "." ? "**/*" : `${base}/**/*`;
+  const anchorAtDir = base === "" || base.startsWith("..");
+  const found = await fg(anchorAtDir ? "**/*" : `${base}/**/*`, {
+    cwd: anchorAtDir ? abs : cwd,
+    ignore,
+    onlyFiles: true,
+    dot: false,
+  });
+  return found.map((file) => resolve(anchorAtDir ? abs : cwd, file));
 }
 
 export interface ResolveOptions {
@@ -108,16 +127,20 @@ export async function resolveTargets(opts: ResolveOptions): Promise<string[]> {
       continue;
     }
 
-    // A directory walks recursively; anything else is treated as a glob.
-    const pattern = st?.isDirectory() ? dirPattern(cwd, abs) : toPosix(input);
-    const found = await fg(pattern, {
+    if (st?.isDirectory()) {
+      for (const file of await walkDirectory(cwd, abs, ignore)) {
+        if (keepByExt(file)) out.add(displayPath(cwd, file));
+      }
+      continue;
+    }
+
+    // Anything else is a glob pattern, which is cwd-relative by nature.
+    const found = await fg(toPosix(input), {
       cwd,
       ignore,
       onlyFiles: true,
       dot: false,
     });
-    // fast-glob returns paths relative to `cwd`, which escape it as `../`
-    // chains when the target is elsewhere on disk.
     for (const file of found) {
       if (keepByExt(file)) out.add(displayPath(cwd, resolve(cwd, file)));
     }

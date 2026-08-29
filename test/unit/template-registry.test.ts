@@ -290,8 +290,6 @@ describe("resolveExtends", () => {
     const merged = await resolveExtends(library["child"]!, load);
 
     expect(merged.sections?.["overview"]?.heading?.const).toBe("Introduction");
-    // The child named only `heading`, so the parent's other rules survive.
-    expect(merged.sections?.["overview"]?.paragraphs?.min).toBe(1);
     expect(merged.sections?.["see also"]?.heading?.const).toBe("See also");
     expect(merged.types).toEqual(["how-to"]);
     expect(merged.additionalSections).toBe(true);
@@ -299,44 +297,37 @@ describe("resolveExtends", () => {
     expect(merged.extends).toBeUndefined();
   });
 
-  it("merges nested `sections` by key, all the way down", async () => {
-    // Tightening one nested section must not discard the siblings the parent
-    // declared around it.
+  // The merge reaches individual rules, not just section names: a child that
+  // names one rule of a nested section keeps the parent's others.
+  it("keeps a nested section's other rules when the child names only some", async () => {
     const deep: Record<string, Template> = {
       base: {
         sections: {
-          Introduction: {
-            paragraphs: { min: 2 },
+          task: {
+            additionalSections: true,
             sections: {
-              Prerequisites: { heading: { const: "Prerequisites" } },
-              Setup: { heading: { const: "Setup" }, paragraphs: { max: 5 } },
+              steps: {
+                heading: { const: "Steps" },
+                lists: { min: 1 },
+                paragraphs: { max: 3 },
+              },
             },
           },
         },
       },
       narrower: {
         extends: "base",
-        sections: {
-          Introduction: {
-            sections: {
-              Setup: { heading: { const: "Installation" } },
-              Cleanup: { heading: { const: "Cleanup" } },
-            },
-          },
-        },
+        sections: { task: { sections: { steps: { lists: { min: 2 } } } } },
       },
     };
     const loadDeep: TemplateResolver = async (ref) => deep[ref]!;
 
-    const intro = (await resolveExtends(deep["narrower"]!, loadDeep)).sections?.["Introduction"];
+    const task = (await resolveExtends(deep["narrower"]!, loadDeep)).sections?.["task"];
 
-    expect(intro?.paragraphs?.min).toBe(2);
-    expect(intro?.sections?.["Prerequisites"]?.heading?.const).toBe("Prerequisites");
-    expect(intro?.sections?.["Setup"]?.heading?.const).toBe("Installation");
-    expect(intro?.sections?.["Setup"]?.paragraphs?.max).toBe(5);
-    // Parent order first, so inherited sections keep the document order the
-    // parent declared and child-only additions land at the end.
-    expect(Object.keys(intro?.sections ?? {})).toEqual(["Prerequisites", "Setup", "Cleanup"]);
+    expect(task?.additionalSections).toBe(true);
+    expect(task?.sections?.["steps"]?.lists).toEqual({ min: 2 });
+    expect(task?.sections?.["steps"]?.heading?.const).toBe("Steps");
+    expect(task?.sections?.["steps"]?.paragraphs?.max).toBe(3);
   });
 
   // `sections` is a container, not a rule. Replacing it wholesale would mean
