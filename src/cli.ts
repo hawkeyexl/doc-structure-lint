@@ -190,12 +190,18 @@ export function buildProgram(): Command {
   program
     .command("templates")
     .description("List the templates that can be applied, and the types they serve")
-    .option("--templates <path>", "also list the templates in this file")
+    .option("--templates <path...>", "also list the templates in these files")
+    .option("-c, --config <path>", "path to moose.config.yaml")
     .option("-f, --format <format>", "output: pretty | json", "pretty")
     .action(async (options, command: Command) => {
       try {
         const format = listFormat(options.format);
-        const info = await runTemplates({ templates: options.templates });
+        // The listing answers "what could route a page?", so it has to see the
+        // same template files a lint would.
+        const found = await loadConfig(options.config);
+        const info = await runTemplates({
+          templates: options.templates ?? found?.config.templates,
+        });
         const color = resolveColor(command.parent ?? command);
         process.stdout.write(`${renderTemplates(info, format, { color })}\n`);
       } catch (err) {
