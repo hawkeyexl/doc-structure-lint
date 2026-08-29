@@ -78,20 +78,38 @@ describe("classifyRef", () => {
 });
 
 describe("built-ins", () => {
-  it("lists none yet, without crashing", () => {
-    // The TGDP templates land in a later PR; the registry has to be usable
-    // empty until then.
-    expect(listBuiltins()).toEqual([]);
+  it("lists every entry in the manifest", () => {
+    const builtins = listBuiltins();
+    expect(builtins.length).toBeGreaterThan(0);
+    for (const builtin of builtins) {
+      expect(builtin.id).toMatch(/^[a-z0-9-]+:[a-z0-9-]+:[\d.]+$/);
+      expect(builtin.title).not.toBe(builtin.id);
+      expect(builtin.types.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("loads a built-in through the same schema validation as a user file", async () => {
+    const [first] = listBuiltins();
+    const template = await loadTemplate(first!.id);
+    expect(template.types).toEqual(first!.types);
+    expect(Object.keys(template.sections ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it("caches a built-in rather than re-reading it", async () => {
+    const [first] = listBuiltins();
+    expect(await loadTemplate(first!.id)).toBe(await loadTemplate(first!.id));
   });
 
   it("errors on an unknown built-in id, listing what is available", async () => {
-    const message = await rejectionMessage(loadTemplate("tgdp:how-to:1"));
-    expect(message).toContain('Unknown built-in template "tgdp:how-to:1"');
-    expect(message).toContain("(none)");
+    // A real vendor and slug with the wrong version: the near miss is the case
+    // worth getting right.
+    const message = await rejectionMessage(loadTemplate("tgdp:how-to:9.9"));
+    expect(message).toContain('Unknown built-in template "tgdp:how-to:9.9"');
+    expect(message).toContain("tgdp:how-to:1.6");
   });
 
   it("refuses to load a built-in id as a file", async () => {
-    const message = await rejectionMessage(loadTemplateFile("tgdp:how-to:1"));
+    const message = await rejectionMessage(loadTemplateFile("tgdp:how-to:1.6"));
     expect(message).toContain("built-in template id, not a template file");
   });
 });
@@ -170,6 +188,46 @@ describe("`instructions` migration", () => {
     expect(message).toContain('"templates.Sample.sections.Introduction.sections.Setup"');
     expect(message).toContain("      sample-introduction-setup:");
     expect(message).toContain("        assertion: Explain the prerequisites");
+  });
+
+  // Inside a `sections:` map the keys are section names the author chose. TGDP's
+  // README doctype wants a section about installation instructions, and calling
+  // it `instructions` must not be mistaken for the legacy property.
+  it("does not mistake a section named `instructions` for the legacy key", () => {
+    const file = validateTemplateFile(
+      {
+        templates: {
+          readme: {
+            sections: {
+              instructions: { heading: { const: "Instructions" } },
+            },
+          },
+        },
+      },
+      "readme.yaml",
+    );
+    expect(file.templates?.["readme"]?.sections?.["instructions"]?.heading?.const).toBe(
+      "Instructions",
+    );
+  });
+
+  it("still catches the legacy property on a section named `instructions`", () => {
+    const message = thrownMessage(() =>
+      validateTemplateFile(
+        {
+          templates: {
+            readme: {
+              sections: {
+                instructions: { instructions: ["Explain how to install it"] },
+              },
+            },
+          },
+        },
+        "readme.yaml",
+      ),
+    );
+    expect(message).toContain('"templates.readme.sections.instructions"');
+    expect(message).toContain("        assertion: Explain how to install it");
   });
 });
 

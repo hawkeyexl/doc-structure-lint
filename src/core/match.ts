@@ -19,6 +19,10 @@
  *    anchored rule that can claim one. Repetition is opt-in rather than the
  *    default: two adjacent slots are common in hand-written templates, and a
  *    greedy first slot would swallow the second one's section.
+ *  - `repeat` applies to anchored rules too, where it claims the run of
+ *    consecutive sections whose headings satisfy the rule. That is how a
+ *    doctype says "one or more sections named `Symptom N`" without giving up
+ *    checking the heading text.
  *  - An optional rule that does not match is simply skipped, and the cursor
  *    does not move.
  *
@@ -79,16 +83,46 @@ function findingAt(
   };
 }
 
-/** Could any rule from `from` onward claim this section by its heading? */
+/**
+ * Could a later *anchored* rule claim this section by its heading?
+ *
+ * Used to end a slot's run. Slots are excluded on purpose: a slot claims
+ * anything, so counting them would make every lookahead true and stop every
+ * slot before it consumed a single section.
+ */
 function claimedLater(rules: Rule[], from: number, section: SectionNode): boolean {
   for (let i = from; i < rules.length; i++) {
     const { rule } = rules[i]!;
-    // A slot claims anything, which would make every lookahead true and stop
-    // every slot immediately. Only anchored rules can end a slot's run.
     if (isSlot(rule)) continue;
     if (headingMatches(section.title, rule)) return true;
   }
   return false;
+}
+
+/**
+ * Are there at least as many sections left as required rules left?
+ *
+ * This is what decides whether a required rule that matched nothing should
+ * nevertheless pair with the section at the cursor, so the report reads
+ * "expected X, found Y" instead of missing + unexpected.
+ *
+ * Coercion is right when the document has a section for every rule and simply
+ * named one wrong - the everyday typo. It is wrong when the document is short,
+ * because then something really is absent, and pairing the survivors up shifts
+ * every later rule by one: the exact misalignment this matcher was rebuilt to
+ * eliminate. Counting is enough to tell the two apart, and it stays O(n) - the
+ * alternative is choosing between assignments, which is backtracking.
+ */
+function enoughSectionsRemain(
+  rules: Rule[],
+  from: number,
+  sectionsRemaining: number,
+): boolean {
+  let required = 0;
+  for (let i = from; i < rules.length; i++) {
+    if (isRequired(rules[i]!.rule)) required++;
+  }
+  return sectionsRemaining >= required;
 }
 
 /** First index at or after `from` whose section satisfies `rule`. */
@@ -162,29 +196,49 @@ export function matchSections(
       continue;
     }
 
-    // Anchored rule: at most one section.
-    if (cursor < sections.length && headingMatches(sections[cursor]!.title, rule)) {
-      matches.push({ name, rule, section: sections[cursor]!, coerced: false });
-      cursor++;
-      continue;
-    }
+    // Anchored rule. It claims one section, or - with `repeat` - the whole run
+    // of consecutive sections whose headings satisfy it. Repetition is not a
+    // slot-only affordance: "one or more sections named `Symptom N`" is a real
+    // doctype shape, and expressing it as an unconstrained slot would give up
+    // checking the heading text in exchange for the repetition.
+    //
+    // The run is found either at the cursor or further on. Scanning ahead is
+    // how extra sections before an expected one are absorbed, and the run has
+    // to continue from wherever it starts - a single stray section ahead of a
+    // repeating rule must not silently demote it to one match, because the
+    // sections it would have claimed then become unexpected and, worse, are
+    // never descended into.
+    const at =
+      cursor < sections.length && headingMatches(sections[cursor]!.title, rule)
+        ? cursor
+        : findForward(sections, cursor, rule);
 
-    const ahead = findForward(sections, cursor, rule);
-    if (ahead !== -1) {
-      for (let i = cursor; i < ahead; i++) extras.push(sections[i]!);
-      matches.push({ name, rule, section: sections[ahead]!, coerced: false });
-      cursor = ahead + 1;
+    if (at !== -1) {
+      for (let i = cursor; i < at; i++) extras.push(sections[i]!);
+      cursor = at;
+      do {
+        matches.push({ name, rule, section: sections[cursor]!, coerced: false });
+        cursor++;
+      } while (
+        rule.repeat === true &&
+        cursor < sections.length &&
+        headingMatches(sections[cursor]!.title, rule)
+      );
       continue;
     }
 
     if (!isRequired(rule)) continue;
 
-    // Required, and no section anywhere satisfies it. If the section at the
-    // cursor is not wanted by any later rule, pair with it anyway so the
-    // report is "expected X, found Y" rather than two findings that make the
-    // reader reconstruct that themselves.
+    // Required, and no section anywhere satisfies it. Pair with the section at
+    // the cursor when nothing else names it and the document is long enough to
+    // satisfy the rules that follow - a misnamed section rather than a missing
+    // one.
     const here = sections[cursor];
-    if (here && !claimedLater(rules, ri + 1, here)) {
+    if (
+      here &&
+      !claimedLater(rules, ri + 1, here) &&
+      enoughSectionsRemain(rules, ri, sections.length - cursor)
+    ) {
       matches.push({ name, rule, section: here, coerced: true });
       cursor++;
       continue;

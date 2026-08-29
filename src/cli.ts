@@ -94,16 +94,25 @@ export function buildProgram(): Command {
 
   program
     .command("lint", { isDefault: true })
-    .description("Lint the given files/dirs/globs against a template")
+    .description(
+      "Lint the given files/dirs/globs, routing each page by its `type` frontmatter",
+    )
     .argument(
       "[paths...]",
       "files, directories, or globs to lint (use - for stdin)",
     )
     .option(
       "-t, --template <ref>",
-      "template to apply: a built-in id, a path, or a name inside --templates",
+      "apply this template to every file, overriding type routing",
     )
-    .option("--templates <path>", "template file to resolve --template within")
+    .option(
+      "--templates <path>",
+      "template file to route by: its templates' `types:` win over built-ins",
+    )
+    .option(
+      "--explain",
+      "print how each file's template was chosen, and lint nothing",
+    )
     .option("--as <format>", "force an input format (e.g. markdown, mdx)")
     .option(
       "--exclude <glob...>",
@@ -115,11 +124,13 @@ export function buildProgram(): Command {
       [
         "",
         "Examples:",
-        "  moose-lint docs/ -t how-to                     # walk a directory",
-        '  moose-lint "**/*.md" -t how-to -f github       # CI annotations',
-        "  moose-lint page.md -t how-to --templates ./templates.yaml",
-        "  moose-lint docs/ -t how-to --exclude '**/drafts/**'",
-        "  cat page.md | moose-lint - -t how-to --as markdown",
+        "  moose-lint docs/                               # route each page by its `type`",
+        "  moose-lint docs/ --templates ./templates.yaml  # add your own templates",
+        "  moose-lint docs/ --explain                     # show why each page routed where",
+        "  moose-lint page.md -t tgdp:how-to:1.6          # force one template",
+        '  moose-lint "**/*.md" -f github                 # CI annotations',
+        "  moose-lint docs/ --exclude '**/drafts/**'",
+        "  cat page.md | moose-lint - -t tgdp:how-to:1.6 --as markdown",
       ].join("\n"),
     )
     .action(async (paths: string[], options, command: Command) => {
@@ -129,19 +140,23 @@ export function buildProgram(): Command {
           ? await readStdin()
           : undefined;
 
+        const explain = options.explain === true;
         const run = await runLint({
           inputs: paths,
           template: options.template,
           templates: options.templates,
           as: options.as,
           exclude: options.exclude,
+          explain,
           stdinContent,
         });
 
         const color = resolveColor(command.parent ?? command);
-        const text = render(run, format, { color });
+        const text = render(run, explain ? "explain" : format, { color });
         if (text.length > 0) process.stdout.write(`${text}\n`);
-        process.exitCode = run.summary.failed > 0 ? 1 : 0;
+        // `--explain` answers a question about configuration, so its exit code
+        // reports whether it could answer it - not whether the docs are clean.
+        process.exitCode = explain ? 0 : run.summary.failed > 0 ? 1 : 0;
       } catch (err) {
         fail(err);
       }

@@ -1,0 +1,58 @@
+info:
+  title: Reference (The Good Docs Project)
+  version: "1.6"
+  source: https://gitlab.com/tgdp/templates/-/blob/v1.6.0/reference/template_reference.md
+
+templates:
+  reference:
+    types:
+      - reference
+
+    sections:
+      title:
+        description: >-
+          The page title. Upstream ships it as `# Reference template`, but a
+          real reference names its own subject, so the H1 is a slot rather than
+          a constant. No paragraph minimum: the published template carries only
+          block quotes under the H1, and a reference that opens straight into
+          its first entry section is well formed.
+        # Reference pages routinely end with sections the doctype does not
+        # enumerate - "See also", "Related information", "Notes". The upstream
+        # template does not forbid them, so they are not findings.
+        additionalSections: true
+
+        sections:
+          reference description:
+            description: >-
+              `## {Reference description}` - a placeholder heading, so a slot.
+              Summarizes what the reference covers and how it relates to the
+              rest of the doc set. Required: the guide makes this the section
+              that "concisely summarizes the reference article's content and
+              purpose". No content rules - the section is table-heavy by
+              nature, and the parser does not model tables, so any paragraph or
+              list minimum would fire on pages that are perfectly good
+              references.
+
+          structured entry:
+            description: >-
+              `## {Table name or other structured entry}` - a placeholder
+              heading standing for a repeated section, so a slot with `repeat`.
+              Claims every consecutive section up to `commands`. Optional
+              because it and `reference description` are both unconstrained
+              placeholders: the matcher cannot tell "the description" from "the
+              first entry", so requiring both would mandate two H2s where the
+              doctype only asks that entries exist.
+            repeat: true
+            required: false
+
+          commands:
+            description: >-
+              `## (Optional) Commands`. The guide calls this "this optional
+              section" outright. The pattern accepts the heading with the
+              `(Optional)` marker still attached, as upstream ships it, and
+              with the marker removed, as an author who keeps the section would
+              write it. A section named anything else - "CLI commands",
+              "Command reference" - simply falls to the entry slot above.
+            required: false
+            heading:
+              pattern: '^(?:\(Optional\)\s+)?Commands$'

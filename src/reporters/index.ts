@@ -9,7 +9,7 @@ import type { FormatInfo } from "../commands/formats.js";
 import type { TemplateInfo, TemplatesInfo } from "../commands/templates.js";
 import { palette, type Colors } from "./color.js";
 
-export type ReportFormat = "pretty" | "json" | "github";
+export type ReportFormat = "pretty" | "json" | "github" | "explain";
 
 /** Listing commands have nothing to annotate, so they offer no `github`. */
 export type ListFormat = "pretty" | "json";
@@ -113,6 +113,60 @@ export function renderGithub(run: LintRun): string {
   return lines.join("\n");
 }
 
+/**
+ * `--explain`: the resolution chain per file, rather than findings.
+ *
+ * Printing every stage, including the ones that had nothing to say, is the
+ * point. "Which template linted this page?" is usually asked because the answer
+ * was surprising, and the surprising part is almost always a stage the reader
+ * forgot applies - a stray `$template`, an override glob matching more than
+ * intended. A report that showed only the winning stage would hide exactly the
+ * thing being looked for.
+ */
+export function renderExplain(run: LintRun, opts: ReportOptions = {}): string {
+  const c = palette(opts.color ?? false);
+  const lines: string[] = [];
+
+  for (const result of run.results) {
+    // Not the pass/fail glyphs: `--explain` reports whether a page was routed,
+    // and a routed page may still be full of findings. Reusing the tick would
+    // read as a clean bill of health for a document nothing has looked at yet.
+    const chosen = result.template;
+    lines.push(`${chosen ? c.cyan("▸") : c.dim("-")} ${c.bold(result.file)}`);
+
+    const steps = result.resolution?.steps ?? [];
+    if (steps.length === 0) {
+      lines.push(`    ${c.dim("(no resolution recorded)")}`);
+    }
+    for (const step of steps) {
+      const mark = step.ref ? c.green("→") : c.dim("·");
+      const label = step.ref ? c.bold(step.ref) : c.dim(step.detail);
+      const suffix = step.ref ? `  ${c.dim(step.detail)}` : "";
+      lines.push(`    ${mark} ${step.stage.padEnd(20)} ${label}${suffix}`);
+    }
+
+    const cause = result.resolution?.cause;
+    if (cause === "unknown-type") {
+      const type = result.resolution?.unknownType;
+      const near = result.resolution?.suggestions ?? [];
+      lines.push(
+        `    ${c.red("✗")} no template serves type "${type}"` +
+          (near.length ? `; did you mean ${near.join(", ")}?` : ""),
+      );
+    } else if (cause === "no-type") {
+      lines.push(`    ${c.dim("skipped: the page declares no type")}`);
+    }
+    lines.push("");
+  }
+
+  const routed = run.results.filter((r) => r.template != null).length;
+  lines.push(
+    `${run.results.length} file${run.results.length === 1 ? "" : "s"}, ` +
+      `${routed} routed, ${run.results.length - routed} unrouted`,
+  );
+  return lines.join("\n");
+}
+
 export function render(
   run: LintRun,
   format: ReportFormat,
@@ -123,6 +177,8 @@ export function render(
       return renderJson(run);
     case "github":
       return renderGithub(run);
+    case "explain":
+      return renderExplain(run, opts);
     case "pretty":
     default:
       return renderPretty(run, opts);

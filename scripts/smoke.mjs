@@ -1,0 +1,123 @@
+/**
+ * Smoke-test the built package, not the source.
+ *
+ * The unit and integration suites run against `src/`, where the built-in
+ * templates sit at `../templates/` relative to the module that reads them.
+ * `tsup` bundles the library into one chunk at the root of `dist/`, where they
+ * sit at `./templates/` instead — so a path that is correct in the repo can be
+ * wrong in the published package, and every test still passes. That is exactly
+ * how it happened once.
+ *
+ * This runs the real `dist/cli.js` the way a user would, and asserts the parts
+ * that only exist after a build: that built-ins load, that a page routes by its
+ * `type`, and that exit codes are what CI will branch on.
+ *
+ * Usage: npm run smoke   (runs `build` first)
+ */
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+
+const run = promisify(execFile);
+const CLI = "dist/cli.js";
+
+let failures = 0;
+
+/** Run the built CLI and return `{ code, stdout, stderr }` without throwing. */
+async function cli(args) {
+  try {
+    const { stdout, stderr } = await run(process.execPath, [CLI, ...args]);
+    return { code: 0, stdout, stderr };
+  } catch (err) {
+    return { code: err.code ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
+  }
+}
+
+function check(name, ok, detail) {
+  if (ok) {
+    console.log(`  ok    ${name}`);
+    return;
+  }
+  failures++;
+  console.error(`  FAIL  ${name}`);
+  if (detail) console.error(`        ${String(detail).trim().split("\n").join("\n        ")}`);
+}
+
+const dir = await mkdtemp(join(tmpdir(), "moose-lint-smoke-"));
+try {
+  console.log(`smoke: ${CLI}`);
+
+  const formats = await cli(["formats"]);
+  check(
+    "formats lists markdown as implemented",
+    formats.code === 0 && /markdown.*implemented/s.test(formats.stdout),
+    formats.stderr || formats.stdout,
+  );
+
+  // The packaging case: built-ins are YAML files copied into dist, read at
+  // runtime. If the copy or the path is wrong, this is where it shows.
+  const templates = await cli(["templates"]);
+  check(
+    "templates lists the built-in doctype templates",
+    templates.code === 0 && templates.stdout.includes("tgdp:how-to:1.6"),
+    templates.stderr || templates.stdout,
+  );
+
+  const upstream = await cli([
+    "test/fixtures/tgdp/template_how-to.md",
+    "-t",
+    "tgdp:how-to:1.6",
+  ]);
+  check(
+    "a built-in loads and lints its own upstream template clean (exit 0)",
+    upstream.code === 0 && upstream.stdout.includes("1 passed"),
+    upstream.stderr || upstream.stdout,
+  );
+
+  const typed = join(dir, "typed.md");
+  await writeFile(
+    typed,
+    "---\ntype: how-to\n---\n\n# Do it\n\n## Overview\n\nWhy.\n\n## Step\n\nHow.\n\n## See also\n",
+  );
+  const routed = await cli([typed]);
+  check(
+    "a page routes by its type with no --template (exit 0)",
+    routed.code === 0 && routed.stdout.includes("1 passed"),
+    routed.stderr || routed.stdout,
+  );
+
+  const untyped = join(dir, "untyped.md");
+  await writeFile(untyped, "# No type here\n");
+  const skipped = await cli([untyped]);
+  check(
+    "an untyped page is skipped, not failed (exit 0)",
+    skipped.code === 0 && skipped.stdout.includes("skipped"),
+    skipped.stderr || skipped.stdout,
+  );
+
+  const mistyped = join(dir, "mistyped.md");
+  await writeFile(mistyped, "---\ntype: how-two\n---\n\n# Typo\n");
+  const unknown = await cli([mistyped]);
+  check(
+    "an unknown type fails with a suggestion (exit 1)",
+    unknown.code === 1 && unknown.stdout.includes("how-to"),
+    unknown.stderr || unknown.stdout,
+  );
+
+  const missing = await cli(["no-such-file.md", "-t", "tgdp:how-to:1.6"]);
+  check(
+    "an operational error exits 2",
+    missing.code === 2,
+    missing.stderr || missing.stdout,
+  );
+} finally {
+  await rm(dir, { recursive: true, force: true });
+}
+
+if (failures > 0) {
+  console.error(`\nsmoke: ${failures} check(s) failed`);
+  process.exit(1);
+}
+console.log("\nsmoke: all checks passed");

@@ -1,0 +1,65 @@
+# Derived from The Good Docs Project "how-to" template, pinned to v1.6.0:
+# https://gitlab.com/tgdp/templates/-/blob/v1.6.0/how-to/template_how-to.md
+#
+# The upstream Markdown is vendored at test/fixtures/tgdp/template_how-to.md and
+# linted against this file, so the two cannot drift. Where they disagree,
+# upstream is right.
+info:
+  title: How-to guide (The Good Docs Project)
+  version: "1.6.0"
+  source: https://gitlab.com/tgdp/templates/-/blob/v1.6.0/how-to/template_how-to.md
+
+templates:
+  how-to:
+    types:
+      - how-to
+    sections:
+      title:
+        description: >-
+          The page title (H1). Upstream ships it as the placeholder "# Title",
+          so the heading text is unconstrained; only what hangs under it is.
+        sections:
+          overview:
+            description: >-
+              What the guide explains, and optionally when and why a reader
+              would want to do it. A how-to that does not say what task it
+              covers is not a how-to, so at least one paragraph is required.
+            heading:
+              const: Overview
+            paragraphs:
+              min: 1
+          before you start:
+            description: >-
+              Prerequisites. Upstream marks this "{This section is optional}",
+              and the authoring guide repeats that, so it is not required.
+              Its shape varies too much to constrain - a lead-in and a bullet
+              list in the template, but prose or grouped categories in the
+              guide's own examples - so no content counts are set.
+            heading:
+              const: Before you start
+            required: false
+          task:
+            description: >-
+              The steps. Upstream's heading is the placeholder "{Task name}",
+              so this is a slot; `repeat` lets a page carry several task
+              sections, which the guide explicitly contemplates ("you may break
+              down the task into multiple logical sub-tasks"). No `lists` floor:
+              a task that delegates its procedure to sub-tasks legitimately
+              holds no ordered list of its own.
+            repeat: true
+            sections:
+              sub-task:
+                description: >-
+                  "### {Sub-task}" - another placeholder heading, and upstream
+                  says to "include a sub-task only if the task is big and
+                  complex", so it is optional and may occur more than once.
+                required: false
+                repeat: true
+          see also:
+            description: >-
+              Related reading. Upstream includes it unconditionally and does not
+              mark it optional the way it marks "Before you start", so it is
+              required. Its body is a mix of prose and links, so nothing is
+              counted.
+            heading:
+              const: See also
