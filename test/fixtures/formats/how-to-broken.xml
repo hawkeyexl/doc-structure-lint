@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  how-to.xml with exactly one defect: the "See also" topic is gone. The twin of
+  how-to-broken.md, and everything else is unchanged, so the single
+  `missing_section` finding is attributable to that one removal.
+-->
+<topic id="rotate-an-api-key" type="how-to">
+  <title>Rotate an API key</title>
+  <body>
+    <section>
+      <title>Overview</title>
+      <p>Rotating a key replaces the old secret without interrupting live
+        traffic.</p>
+      <note type="tip">
+        <p>An admonition is not a paragraph, so this one is skipped whole.</p>
+      </note>
+    </section>
+    <section>
+      <title>Before you start</title>
+      <p>You need an account with the <codeph>admin</codeph> role.</p>
+    </section>
+  </body>
+  <topic id="rotate-the-key">
+    <title>Rotate the key</title>
+    <body>
+      <p>Issue the replacement, then retire the old one.</p>
+      <codeblock outputclass="language-bash">widget keys rotate --id abc123</codeblock>
+    </body>
+  </topic>
+</topic>

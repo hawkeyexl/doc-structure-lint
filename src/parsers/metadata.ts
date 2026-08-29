@@ -1,0 +1,70 @@
+/**
+ * Metadata helpers shared by every format that has both metadata and headings.
+ *
+ * Both functions here were independently written four times, once per parser,
+ * and were character-identical each time. They are rules about a `DocumentTree`
+ * rather than about any one syntax, so they belong in one place: a subtlety
+ * duplicated four ways is a subtlety that will be fixed one way.
+ */
+import { locateFrontmatter } from "docmeta";
+import type { Position } from "../types.js";
+import type { Block } from "./sectionize.js";
+
+/**
+ * Span of a leading fenced metadata block (`--- … ---`, `+++ … +++`,
+ * `;;; … ;;;`), or null when the content carries none.
+ *
+ * docmeta's locator reports character offsets against the original content, so
+ * line numbers are recovered by counting newlines rather than by a second
+ * parse - exact, because those offsets are byte-for-byte.
+ */
+export function fencedPosition(content: string): Position | null {
+  const loc = locateFrontmatter(content);
+  if (!loc) return null;
+  const before = content.slice(0, loc.openStart);
+  const startLine = before.split("\n").length;
+  const inner = content.slice(loc.openStart, loc.closeEnd);
+  return {
+    start: { line: startLine, column: 1, offset: loc.openStart },
+    end: {
+      line: startLine + inner.split("\n").length - 1,
+      column: 1,
+      offset: loc.closeEnd,
+    },
+  };
+}
+
+/**
+ * Treat a metadata `title` as the document's H1 when the body has none.
+ *
+ * Docusaurus, Hugo, and Starlight all render the page title from frontmatter,
+ * so their pages legitimately start at `##`. Read literally, such a page has no
+ * top-level section, and every doctype template - which models the title as its
+ * outermost rule, because that is how the published templates are written -
+ * misaligns against it and reports a cascade. The page is not malformed; the
+ * title simply is not written where a naive reading looks for it.
+ *
+ * So a synthetic heading is prepended, positioned on the metadata that actually
+ * carries the title. Everything downstream then sees the document the way a
+ * reader sees it rendered.
+ *
+ * Only when the body has no level-1 heading of its own: prepending one where a
+ * real title exists would nest it inside a synthetic parent, which is a
+ * different document.
+ *
+ * See ADR 01006. Formats where the title is always a body element - XML, whose
+ * "metadata" is the root element's own attributes - do not call this, and
+ * should not.
+ */
+export function withMetadataTitle(
+  blocks: Block[],
+  metadata: Record<string, unknown> | null,
+  position: Position | null,
+): Block[] {
+  const title = metadata?.["title"];
+  if (typeof title !== "string" || title.length === 0) return blocks;
+  if (position === null) return blocks;
+  if (blocks.some((b) => b.type === "heading" && b.level === 1)) return blocks;
+
+  return [{ type: "heading", level: 1, title, position }, ...blocks];
+}

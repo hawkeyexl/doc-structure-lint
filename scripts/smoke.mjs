@@ -109,6 +109,28 @@ try {
     unknown.stderr || unknown.stdout,
   );
 
+  // Every implemented format, through the built package, against one built-in.
+  // The vitest suite proves parity from `src/`; this proves the parsers and
+  // their dependencies survive bundling.
+  const formatsList = await cli(["formats", "-f", "json"]);
+  let implementedExts = [];
+  try {
+    implementedExts = JSON.parse(formatsList.stdout)
+      .filter((f) => f.implemented)
+      .map((f) => f.extensions[0]);
+  } catch {
+    implementedExts = [];
+  }
+  const fixtures = implementedExts.map((ext) => `test/fixtures/formats/how-to${ext}`);
+  const everyFormat = await cli(fixtures);
+  check(
+    `one template lints all ${fixtures.length} implemented formats clean`,
+    fixtures.length > 0 &&
+      everyFormat.code === 0 &&
+      everyFormat.stdout.includes(`${fixtures.length} passed`),
+    everyFormat.stderr || everyFormat.stdout,
+  );
+
   // SARIF is what a CI code-scanning upload consumes, so a malformed envelope
   // is only discovered by whoever configured the upload.
   const sarif = await cli([

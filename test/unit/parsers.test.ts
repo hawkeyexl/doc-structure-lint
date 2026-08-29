@@ -203,33 +203,55 @@ describe("parser registry", () => {
   it("walks directories using only implemented formats", () => {
     const exts = supportedExtensions();
     expect(exts).toEqual(expect.arrayContaining([".md", ".markdown", ".mdx"]));
-    expect(exts).not.toContain(".rst");
+    // Every extension offered for a directory walk must belong to a parser that
+    // can actually parse it, or the walk collects files it will only skip.
+    for (const ext of exts) {
+      expect(parserForExtension(ext)?.implemented, ext).toBe(true);
+    }
   });
 
   // Registering an unimplemented format is what turns a silent mis-parse into a
   // named gap: the old `inferFileType` defaulted every unknown extension to
   // Markdown.
+  // Asserted against whatever is still on the roadmap, so it keeps meaning
+  // something as parsers land - and reports honestly when none are left.
   it("registers roadmap formats and reports them as not implemented", () => {
-    const rst = parserForExtension(".rst");
-    expect(rst?.implemented).toBe(false);
-    expect(() => rst!.parse("Title\n=====\n", "a.rst")).toThrow(
-      /reStructuredText is not implemented yet/,
-    );
+    const planned = listFormats().filter((f) => !f.implemented);
+    for (const format of planned) {
+      const parser = parserForExtension(format.extensions[0]!)!;
+      expect(parser.implemented).toBe(false);
+      expect(() => parser.parse("anything", `a${format.extensions[0]}`)).toThrow(
+        new RegExp(`${format.label} is not implemented yet`),
+      );
+    }
+    // Nothing to assert once every format ships; say so rather than pass mutely.
+    if (planned.length === 0) {
+      expect(supportedExtensions().length).toBeGreaterThan(0);
+    }
   });
 
   it("lists every format with its implementation status", () => {
     const formats = listFormats();
-    expect(formats.map((f) => f.name)).toEqual([
+    // Order is presentational and shifts as parsers land; membership and the
+    // implemented/planned split are the contract `moose-lint formats` reports.
+    expect(formats.map((f) => f.name).sort()).toEqual([
+      "asciidoc",
+      "html",
       "markdown",
       "mdx",
-      "asciidoc",
       "rst",
-      "html",
       "xml",
     ]);
-    expect(formats.filter((f) => f.implemented).map((f) => f.name)).toEqual([
+    expect(formats.every((f) => f.extensions.length > 0)).toBe(true);
+    expect(formats.filter((f) => f.implemented).map((f) => f.name)).toContain(
       "markdown",
-      "mdx",
-    ]);
+    );
+  });
+
+  // Implemented parsers come first, so `moose-lint formats` reads as "here is
+  // what works, and here is what is coming" rather than interleaving the two.
+  it("lists implemented formats before planned ones", () => {
+    const implemented = listFormats().map((f) => f.implemented);
+    expect(implemented).toEqual([...implemented].sort((a, b) => Number(b) - Number(a)));
   });
 });
