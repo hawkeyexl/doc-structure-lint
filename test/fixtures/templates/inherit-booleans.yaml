@@ -1,0 +1,23 @@
+# The `extends` merge runs on templates that have been through Ajv. If the
+# schema declared JSON Schema `default`s for `required`/`repeat`/
+# `additionalSections`, Ajv's `useDefaults` would write them into `child`'s
+# partial `task` override, and those written-in values would then beat the
+# parent's real ones. `child` states neither, so both must be inherited.
+templates:
+  base:
+    sections:
+      task:
+        required: false
+        additionalSections: true
+        sections:
+          steps:
+            lists:
+              min: 1
+  child:
+    extends: inherit-booleans.yaml#base
+    sections:
+      task:
+        sections:
+          steps:
+            lists:
+              min: 2

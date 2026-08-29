@@ -13,7 +13,7 @@ import {
   validateTemplateFile,
   type TemplateResolver,
 } from "../../src/core/template-registry.js";
-import type { Template } from "../../src/core/template.js";
+import { isRequired, isSlot, type Template } from "../../src/core/template.js";
 import { MooseLintError } from "../../src/types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -97,12 +97,15 @@ describe("built-ins", () => {
 });
 
 describe("loadTemplateFile", () => {
-  it("loads a yaml file and fills in rule defaults", async () => {
+  it("loads a yaml file and leaves unstated booleans unstated", async () => {
     const file = await loadTemplateFile(join(fixtures, "single.yaml"));
     const overview = file.templates?.["how-to"]?.sections?.["overview"];
     expect(overview?.heading?.const).toBe("Overview");
-    // `useDefaults` is what the matcher relies on for "required unless stated".
-    expect(overview?.required).toBe(true);
+    // Deliberately NOT defaulted to `true` at load time: a written-in default
+    // wins the `extends` merge and would reset an inherited `required: false`.
+    // "Required unless stated" is `isRequired`'s job, not the loader's.
+    expect(overview?.required).toBeUndefined();
+    expect(isRequired(overview!)).toBe(true);
     expect(file.templates?.["how-to"]?.sections?.["before you start"]?.required).toBe(false);
   });
 
@@ -210,9 +213,8 @@ describe("the repo's own templates.yaml", () => {
     // `$ref: "#/components/sections/Next steps"`, resolved before validation.
     expect(intro?.sections?.["Next steps"]?.heading?.const).toBe("Next steps");
     expect(intro?.sections?.["Next steps"]?.required).toBe(false);
-    // `sequence`, and a default filled in on a nested rule.
     expect(intro?.sequence).toEqual([{ paragraphs: { min: 2 } }]);
-    expect(intro?.sections?.["Prerequisites"]?.required).toBe(true);
+    expect(isRequired(intro?.sections?.["Prerequisites"]!)).toBe(true);
 
     // `$ref: "#/components/parameters"` on a section with a heading pattern.
     const params = file.templates?.["api-operation"]?.sections?.["request-parameters"];
@@ -359,6 +361,20 @@ describe("resolveExtends", () => {
     ]);
   });
 
+  // Regression: Ajv `useDefaults` used to write `required`/`repeat`/
+  // `additionalSections` into every section at load time, so a child that
+  // overrode one nested rule carried defaults that beat the parent's real
+  // values. Loading through the schema is the whole point of this test.
+  it("inherits booleans the child never states, after a real schema load", async () => {
+    const child = await loadTemplate(join(fixtures, "inherit-booleans.yaml#child"));
+    const merged = await resolveExtends(child, (ref) => loadTemplate(join(fixtures, ref)));
+    const task = merged.sections?.["task"];
+
+    expect(task?.additionalSections).toBe(true);
+    expect(task?.required).toBe(false);
+    expect(task?.sections?.["steps"]?.lists?.min).toBe(2);
+  });
+
   it("leaves the parent untouched", async () => {
     await resolveExtends(library["child"]!, load);
     expect(library["base"]?.sections?.["overview"]?.heading?.const).toBe("Overview");
@@ -414,7 +430,8 @@ describe("the template schema", () => {
       "empty.yaml",
     );
     const task = file.templates?.["how-to"]?.sections?.["task"];
-    expect(task?.required).toBe(true);
+    expect(isRequired(task!)).toBe(true);
+    expect(isSlot(task!)).toBe(true);
     expect(task?.heading).toBeUndefined();
   });
 
@@ -424,12 +441,13 @@ describe("the template schema", () => {
       "repeat.yaml",
     );
     expect(file.templates?.["how-to"]?.sections?.["task"]?.repeat).toBe(true);
-    // Defaulted off, so a plain slot claims exactly one section.
+    // Absent, not written in as `false`, so a plain slot claims exactly one
+    // section without carrying a value that would win an `extends` merge.
     const plain = validateTemplateFile(
       { templates: { "how-to": { sections: { task: {} } } } },
       "repeat.yaml",
     );
-    expect(plain.templates?.["how-to"]?.sections?.["task"]?.repeat).toBe(false);
+    expect(plain.templates?.["how-to"]?.sections?.["task"]?.repeat).toBeUndefined();
   });
 
   it("accepts `types` and `extends` on a template", () => {

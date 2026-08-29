@@ -92,6 +92,29 @@ describe("resolveTargets", () => {
     expect(files).toEqual(["docs/guide.mdx"]);
   });
 
+  // A directory outside cwd relativizes to a `../` chain, and a leading
+  // wildcard will not cross a `..` segment - so walking from cwd would leave
+  // every ignore glob, defaults included, silently matching nothing.
+  it("still excludes when the directory is outside cwd", async () => {
+    const files = await resolveTargets({
+      inputs: [join(dir, "docs")],
+      exclude: ["**/drafts/**"],
+      cwd: process.cwd(),
+    });
+    expect(files.some((f) => f.endsWith("/intro.md"))).toBe(true);
+    expect(files.some((f) => f.includes("/drafts/"))).toBe(false);
+  });
+
+  it("prints a target outside cwd as an absolute path, not a ../ chain", async () => {
+    const files = await resolveTargets({
+      inputs: [join(dir, "docs", "intro.md")],
+      cwd: process.cwd(),
+    });
+    expect(files).toHaveLength(1);
+    expect(files[0]!.startsWith("..")).toBe(false);
+    expect(files[0]!.endsWith("/docs/intro.md")).toBe(true);
+  });
+
   it("skips the stdin token", async () => {
     const files = await resolveTargets({ inputs: ["-"], cwd: dir });
     expect(files).toEqual([]);
