@@ -1,0 +1,13 @@
+{
+  "templates": {
+    "concept": {
+      "types": ["concept"],
+      "sections": {
+        "overview": {
+          "heading": { "const": "Overview" },
+          "paragraphs": { "min": 1 }
+        }
+      }
+    }
+  }
+}

@@ -128,3 +128,12 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Build output (tsup writes the published package here)
+dist/
+
+# Husky's generated helper directory
+.husky/_/
+
+# Vitest cache
+.vitest/

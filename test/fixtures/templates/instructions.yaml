@@ -1,0 +1,9 @@
+# A doc-structure-lint template that still carries the language-model hook.
+templates:
+  how-to:
+    sections:
+      title:
+        instructions:
+          - Must mention the intent of the document
+        paragraphs:
+          min: 1

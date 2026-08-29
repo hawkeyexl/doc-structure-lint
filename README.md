@@ -1,174 +1,109 @@
-# Doc Structure Lint
+# moose-lint
 
-> **This is an alpha release.** Interfaces and structures are subject to change.
+Validate the **structure** of a document against a doctype template. Deterministic,
+built for CI.
 
-A tool to validate Markdown document structure against specified templates, ensuring consistent documentation across your projects.
+> **Renamed from `doc-structure-lint`.** This package was published as
+> `doc-structure-lint` up to v0.0.4 and is `moose-lint` from here. The CLI is not
+> compatible: `--file-path` and `--template-path` are gone, targets are
+> positional, and `instructions:` has been removed from the template format. See
+> [Migrating](#migrating-from-doc-structure-lint).
 
-## Features
+`moose-lint` checks that a page has the shape it claims to have: the sections a
+doctype calls for, in order, holding the paragraphs, code blocks, and lists that
+doctype requires. It reads the document as a syntax tree — it does not pattern-match
+source text — and it does not judge prose. Every run is a function of the document
+and the template, so the same inputs always produce the same findings.
 
-- Validate Markdown documents against YAML-defined templates
-- Rich validation capabilities:
-  - [Section and subsection structure validation](#section-properties)
-  - [Paragraph count requirements](#paragraphs)
-  - [List validation](#lists) (ordered/unordered, item counts)
-  - [Code block requirements](#code-blocks)
-- Detailed error reporting with precise document positions
-- Template dereferencing support for modular template definitions
-- JSON Schema validation for template files
+It is one of a family of documentation tools, and it deliberately does one job:
 
-### Planned Features
+| tool | question it answers |
+| --- | --- |
+| [`moose-meta`](https://github.com/hawkeyexl/docmeta) | Is the frontmatter present and well-formed? |
+| **`moose-lint`** | **Does the body have the shape its doctype calls for?** |
+| [`moose-docevals`](https://github.com/hawkeyexl/moose-docevals) | Is the prose any good? |
+| [`moose-kg`](https://github.com/hawkeyexl/moose-kg) | How do these pages relate to each other? |
+| [Doc Detective](https://doc-detective.com) | Do the documented steps actually work? |
 
-- Frontmatter validation
-- AsciiDoc support
-- reStructuredText support
-- Infer template from document structure
+Judgment about writing quality belongs to `moose-docevals`, which has the provider
+abstraction, cost ceilings, and ensemble judging for it. `moose-lint` has no
+language model and makes no network calls except to fetch a template you point it at.
 
-## Usage (as a CLI tool)
-
-```bash
-npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
-```
-
-Doc Structure Lint uses a _local_ language model to evaluate the `instructions` rules of your templates. This model only takes about 2 GB of storage, and it's only downloaded once. The first time you run the tool with a template that uses `instructions`, it may take a few minutes to download the language model. If you want to preload the model during installation, set the `DOC_STRUCTURE_LINT_PRELOAD` environment variable to `1`.
-
-```bash
-export DOC_STRUCTURE_LINT_PRELOAD=1 && npx doc-structure-lint --file-path path/to/doc.md --template path/to/template.yaml
-```
-
-### Options
-
-- `--file-path` or `-f`: URL or path to the content to lint. Local paths can be individual files or directories.
-- `--template-path` or `-p`: URL or path to the template file (default: `./template.yaml`).
-- `--template` or `-t`: Name of the template to use
-- `--json`: Output results in JSON format
-
-## Usage (as a package)
-
-### Installation
+## Install
 
 ```bash
-npm install doc-structure-lint
+npm install -g moose-lint
 ```
 
-### API Usage
+Requires Node.js 24 or later.
 
-```javascript
-import { lintDocument } from "doc-structure-lint";
+## Quick start
 
-async function validateDocument() {
-  const result = await lintDocument({
-    file: "path/to/doc.md",  // Path or URL. Doesn't support directories.
-    templatePath: "path/to/template.yaml",  // Path or URL
-    template: "Template name",  // Name of the template to use
-  });
-}
+Point it at files, directories (walked recursively), or globs.
+
+```bash
+moose-lint docs/ --template ./templates.yaml#how-to
 ```
 
-## Template Format
+```text
+✓ docs/install.md
+✗ docs/configure.md
+    12:1  heading_const_error   Prerequisites: Expected title "Overview", but found "Prerequisites"
+    41:1  missing_section       Configure: Missing section "See also"
 
-Templates are defined in YAML (as shown here) or JSON and specify the structure and content requirements for your documents. Each template can contain multiple sections with various validation rules.
-
-Template definitions also support referencing with the `$ref` key, allowing you to reuse common section definitions across multiple templates.
-
-### Basic Structure
-
-```yaml
-templates:
-  template-name: # Must be alphanumeric, can include hyphens and underscores
-    sections: # Required - contains section definitions
-      section-name: # Must be alphanumeric, can include hyphens and underscores
-        # Section properties go here
+2 files checked, 1 passed, 1 failed, 0 skipped
 ```
 
-### Section Properties
+A clean run exits `0`, findings exit `1`, and an operational error — no inputs, an
+unreadable template, an invalid template — exits `2`.
 
-```yml
-description: Description of the section's purpose
-instructions: # List of instructions that a section must follow, evaluated by a local language model. Doesn't evaluate content from subsections.
-  - Instruction 1
-  - Instruction 2
-required: true # Whether the section must be present (default: true)
-heading:
-  const: Exact heading text # Exact heading text match
-  pattern: ^Regex pattern$ # Regex pattern for heading text
-sections: # Nested subsection definitions
-  nested-section:
-    # Nested section properties
-additionalSections: false # Allow undefined subsections (default: false)
+### Commands
+
+```
+moose-lint [paths...]   Lint. -t/--template <ref>, --templates <path>, --as <format>,
+                        --exclude <glob...>, -f/--format <pretty|json|github>, --no-color
+moose-lint templates    List resolvable templates and the doctypes they serve
+moose-lint formats      List input formats, implemented and planned
 ```
 
-### Content Validation Rules
+`-` as a path reads the document from stdin, and needs `--as` to pick a parser.
 
-#### Paragraphs
+## Input formats
 
-```yaml
-paragraphs:
-  min: 0 # Minimum number of paragraphs
-  max: 10 # Maximum number of paragraphs
-  patterns: # Array of regex patterns applied sequentially
-    - "^Start with.*"
-    - ".*end with this$"
+Structure comes from a real parse, behind a per-format registry: adding a format
+does not touch matching, rules, or reporting. A format that is registered but not
+yet implemented says so rather than being quietly parsed as Markdown.
+
+```bash
+moose-lint formats
 ```
 
-#### Code Blocks
+| format | extensions | status |
+| --- | --- | --- |
+| Markdown | `.md`, `.markdown` | implemented |
+| MDX | `.mdx` | implemented |
+| AsciiDoc | `.adoc`, `.asciidoc` | planned |
+| reStructuredText | `.rst` | planned |
+| HTML | `.html`, `.htm` | planned |
+| XML | `.xml` | planned |
 
-```yaml
-code_blocks:
-  min: 0 # Minimum number of code blocks
-  max: 5 # Maximum number of code blocks
-```
+Directory walks pick up implemented formats only. Naming an unimplemented file
+explicitly reports it as skipped, with the format named.
 
-#### Lists
+## Template format
 
-```yaml
-lists:
-  min: 0 # Minimum number of lists
-  max: 5 # Maximum number of lists
-  items: # Requirements for list items
-    min: 1 # Minimum items per list
-    max: 10 # Maximum items per list
-    paragraphs: # Paragraph requirements within items
-      min: 0
-      max: 2
-    code_blocks: # Code block requirements within items
-      min: 0
-      max: 1
-    lists: # Nested list requirements
-      min: 0
-      max: 2
-```
-
-#### Content Sequence
-
-Use `sequence` to specify a strict order of content elements:
-
-```yaml
-sequence:
-  - paragraphs:
-      min: 1 # Must start with at least one paragraph
-      max: 3 # But a maximum of three paragraphs
-  - code_blocks:
-      max: 1 # Followed by at most one code block
-  - lists:
-      min: 1 # Then at least one list
-  - paragraphs:
-      min: 1 # And ending with at least one paragraph
-```
-
-### Example Template
-
-The following definition includes templates for a "How To" guide and an "API Operation" reference. Note that the `parameters` component is used in multiple sections with the `$ref` key.
+Templates are YAML or JSON. A file holds one or more named templates; each
+describes a document as nested sections.
 
 ```yaml
 templates:
   how-to:
+    types: [how-to] # doctypes this template serves
     sections:
-      title:
-        instructions:
-          - Must mention the intent of the document
+      title: # matches the H1
         paragraphs:
           min: 1
-        sections:
+        sections: # H2s beneath it, in order
           overview:
             heading:
               const: Overview
@@ -177,91 +112,122 @@ templates:
           before you start:
             heading:
               const: Before you start
-            paragraphs:
-              min: 1
+            required: false
           task:
-            paragraphs:
-              min: 1
+            repeat: true # one or more sections, headings unconstrained
             additionalSections: true
-            sections:
-              Sub-task:
-                paragraphs:
-                  min: 1
           see also:
             heading:
               const: See also
-            paragraphs:
-              min: 1
+```
+
+### Section rules
+
+```yaml
+description: What this section is for. Not validated against.
+heading:
+  const: Exact heading text # or:
+  pattern: ^Regex against the heading$
+required: true # default true
+repeat: false # a heading-less section may claim more than one section
+additionalSections: false # allow subsections this template does not describe
+sections: {} # nested section rules, in document order
+```
+
+A section rule that constrains no heading text is a **slot**: it matches whatever
+heading is in that position. That is how you describe a section whose title varies
+by page. A slot claims exactly one section unless it sets `repeat: true`.
+
+### Content rules
+
+```yaml
+paragraphs:
+  min: 0
+  max: 10
+  patterns: # regexes applied to paragraphs in order
+    - ^Start with.*
+code_blocks:
+  min: 0
+  max: 5
+lists:
+  min: 0
+  max: 5
+  items:
+    min: 1
+    max: 10
+    paragraphs: { min: 0, max: 2 } # rules inside each list item
+    code_blocks: { max: 1 }
+    lists: { max: 2 }
+sequence: # a strict order of content, before any subsection
+  - paragraphs: { min: 1 }
+  - code_blocks: { max: 1 }
+  - lists: { min: 1 }
+```
+
+### Reuse
+
+`$ref` shares a definition within a file, and `extends` inherits another template
+wholesale:
+
+```yaml
+templates:
   api-operation:
     sections:
-      overview:
-        heading:
-          const: "Overview"
-        paragraphs:
-          min: 1
-          max: 3
       request-parameters:
         $ref: "#/components/parameters"
-      response-parameters:
-        $ref: "#/components/parameters"
-      examples:
+  strict-how-to:
+    extends: ./templates.yaml#how-to
+    sections:
+      see also:
         required: true
-        code_blocks:
-          min: 1
-        sections:
-          success:
-            heading:
-              const: "Success Response"
-            sequence:
-              - paragraphs:
-                  min: 1
-              - code_blocks:
-                  min: 1
-          error:
-            required: false
-            heading:
-              const: "Error Response"
-
-components:
-  parameters:
-    required: false
-    heading:
-      pattern: "^Parameters|Request Parameters$"
-    lists:
-      min: 1
-      items:
-        min: 1
 ```
 
-To use this template, save it to a file (like the default `templates.yaml`) and specify the template name that matches the key you set in your definition:
+## Using it as a library
 
-```bash how-to
-npx doc-structure-lint --file-path path/to/doc.md --template-path path/to/templates.yaml --template how-to
+```javascript
+import { runLint } from "moose-lint";
+
+const run = await runLint({
+  inputs: ["docs/"],
+  template: "./templates.yaml#how-to",
+});
 ```
 
-```bash api-operation
-npx doc-structure-lint --file-path path/to/operation.md --template-path path/to/templates.yaml --template api-operation
-```
+`-f json` emits `[{ file, success, errors: [{ type, heading, message, position }] }]`,
+which is what tool adapters parse.
+
+## Migrating from `doc-structure-lint`
+
+| before | now |
+| --- | --- |
+| `--file-path docs/` | positional: `moose-lint docs/` |
+| `--template-path t.yaml --template how-to` | `--template t.yaml#how-to` |
+| `--json` | `-f json` |
+| `DOC_STRUCTURE_LINT_PRELOAD=1` | gone; there is no model to preload |
+| `doc-structure-lint: 0.0.1` in a template file | remove it |
+| `instructions:` in a section | move to a `moose-docevals` assertion eval |
+
+`instructions:` used a bundled 2 GB local language model to judge prose, which made
+runs non-deterministic and duplicated `moose-docevals`. Loading a template that
+still uses it fails with a message containing the replacement config to paste. See
+[ADR 01003](adrs/01003-remove-the-language-model-and-be-deterministic.md).
+
+Section matching also changed. It used to pair template rules to document sections
+by array index, so a single absent optional section misaligned every comparison
+after it. It is now one ordered pass over heading identity — see
+[ADR 01002](adrs/01002-match-sections-in-order-not-by-index.md). Templates that
+worked before still work; templates with optional sections now work *correctly*.
 
 ## Development
 
-1. Clone the repository
-2. Install dependencies:
+```bash
+npm install
+npm test
+npm run typecheck
+```
 
-   ```bash
-   npm install
-   ```
-
-3. Run tests:
-
-   ```bash
-   npm test
-   ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Decisions are recorded in [`adrs/`](adrs/).
 
 ## License
 
-MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).

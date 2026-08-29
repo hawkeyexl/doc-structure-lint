@@ -1,0 +1,496 @@
+import { describe, it, expect } from "vitest";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseYaml } from "yaml";
+import { dereference } from "@apidevtools/json-schema-ref-parser";
+import {
+  classifyRef,
+  listBuiltins,
+  loadTemplate,
+  loadTemplateFile,
+  resolveExtends,
+  validateTemplateFile,
+  type TemplateResolver,
+} from "../../src/core/template-registry.js";
+import type { Template } from "../../src/core/template.js";
+import { MooseLintError } from "../../src/types.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const fixtures = join(here, "..", "fixtures", "templates");
+const repoRoot = join(here, "..", "..");
+
+/** The message of the `MooseLintError` a rejected promise carries. */
+async function rejectionMessage(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+  } catch (err) {
+    expect(err).toBeInstanceOf(MooseLintError);
+    return (err as Error).message;
+  }
+  throw new Error("expected the call to reject, but it resolved");
+}
+
+/** The message of the `MooseLintError` a synchronous call throws. */
+function thrownMessage(fn: () => unknown): string {
+  try {
+    fn();
+  } catch (err) {
+    expect(err).toBeInstanceOf(MooseLintError);
+    return (err as Error).message;
+  }
+  throw new Error("expected the call to throw, but it returned");
+}
+
+describe("classifyRef", () => {
+  it("classifies a built-in id", () => {
+    expect(classifyRef("tgdp:how-to:1").kind).toBe("builtin");
+    // A hyphenated segment must still classify as a built-in, not a file.
+    expect(classifyRef("moose-lint:how-to:1").kind).toBe("builtin");
+    expect(classifyRef("tgdp:how-to:1").ref).toBe("tgdp:how-to:1");
+  });
+
+  it("classifies an http(s) url", () => {
+    expect(classifyRef("https://example.com/templates.yaml").kind).toBe("url");
+    expect(classifyRef("http://example.com/templates.yaml").kind).toBe("url");
+  });
+
+  it("classifies a path as a file", () => {
+    expect(classifyRef("./templates.yaml").kind).toBe("file");
+    expect(classifyRef("templates/how-to.yaml").kind).toBe("file");
+    expect(classifyRef("../a/b.json").kind).toBe("file");
+  });
+
+  it("never classifies a Windows path as a built-in", () => {
+    expect(classifyRef("C:\\Users\\me\\templates.yaml").kind).toBe("file");
+    // No extension either: the backslash alone has to be enough.
+    expect(classifyRef("C:\\Users\\me\\templates").kind).toBe("file");
+    expect(classifyRef("C:").kind).toBe("file");
+  });
+
+  it("classifies a bare template filename as a file, not a built-in", () => {
+    // No path separator, so only the extension keeps these out of the
+    // built-in namespace.
+    expect(classifyRef("templates.yaml").kind).toBe("file");
+    expect(classifyRef("templates.yml").kind).toBe("file");
+    expect(classifyRef("templates.json").kind).toBe("file");
+  });
+});
+
+describe("built-ins", () => {
+  it("lists none yet, without crashing", () => {
+    // The TGDP templates land in a later PR; the registry has to be usable
+    // empty until then.
+    expect(listBuiltins()).toEqual([]);
+  });
+
+  it("errors on an unknown built-in id, listing what is available", async () => {
+    const message = await rejectionMessage(loadTemplate("tgdp:how-to:1"));
+    expect(message).toContain('Unknown built-in template "tgdp:how-to:1"');
+    expect(message).toContain("(none)");
+  });
+
+  it("refuses to load a built-in id as a file", async () => {
+    const message = await rejectionMessage(loadTemplateFile("tgdp:how-to:1"));
+    expect(message).toContain("built-in template id, not a template file");
+  });
+});
+
+describe("loadTemplateFile", () => {
+  it("loads a yaml file and fills in rule defaults", async () => {
+    const file = await loadTemplateFile(join(fixtures, "single.yaml"));
+    const overview = file.templates?.["how-to"]?.sections?.["overview"];
+    expect(overview?.heading?.const).toBe("Overview");
+    // `useDefaults` is what the matcher relies on for "required unless stated".
+    expect(overview?.required).toBe(true);
+    expect(file.templates?.["how-to"]?.sections?.["before you start"]?.required).toBe(false);
+  });
+
+  it("loads a json file", async () => {
+    const file = await loadTemplateFile(join(fixtures, "single.json"));
+    expect(file.templates?.["concept"]?.types).toEqual(["concept"]);
+  });
+
+  it("reports a missing file by name", async () => {
+    const message = await rejectionMessage(loadTemplateFile(join(fixtures, "nope.yaml")));
+    expect(message).toContain("Template file not found");
+    expect(message).toContain("nope.yaml");
+  });
+
+  it("names the source and the instance path of a schema error", async () => {
+    const source = join(fixtures, "invalid.yaml");
+    const message = await rejectionMessage(loadTemplateFile(source));
+    // The pre-rewrite loader threw a bare "Template is invalid" here.
+    expect(message).toContain(source);
+    expect(message).toContain("/templates/how-to/sections/overview");
+    expect(message).toContain("must NOT have additional properties");
+    expect(message).toContain("paragrafs");
+  });
+});
+
+describe("`instructions` migration", () => {
+  it("replaces the raw schema error with a migration message", async () => {
+    const source = join(fixtures, "instructions.yaml");
+    const message = await rejectionMessage(loadTemplateFile(source));
+
+    expect(message).toContain(source);
+    expect(message).toContain('"templates.how-to.sections.title" uses `instructions`');
+    expect(message).toContain("moose-lint no longer evaluates");
+    expect(message).toContain("moose-docevals assertion eval in moose.config.yaml");
+    // The eval snippet, with the author's own instruction in it.
+    expect(message).toContain("  docevals:");
+    expect(message).toContain("    evals:");
+    expect(message).toContain("      how-to-title:");
+    expect(message).toContain("        assertion: Must mention the intent of the document");
+    expect(message).toContain("        grader: ai");
+    // And none of Ajv's useless "must NOT be valid" for the `not` keyword.
+    expect(message).not.toContain("must NOT be valid");
+  });
+
+  it("catches `instructions` wherever it sits in the file", () => {
+    const message = thrownMessage(() =>
+      validateTemplateFile(
+        {
+          templates: {
+            Sample: {
+              sections: {
+                Introduction: {
+                  sections: { Setup: { instructions: ["Explain the prerequisites"] } },
+                },
+              },
+            },
+          },
+        },
+        "nested.yaml",
+      ),
+    );
+    expect(message).toContain('"templates.Sample.sections.Introduction.sections.Setup"');
+    expect(message).toContain("      sample-introduction-setup:");
+    expect(message).toContain("        assertion: Explain the prerequisites");
+  });
+});
+
+/**
+ * The repo's own `templates.yaml`, ported. Two things in it did not survive:
+ * `instructions:` on two sections - the local-language-model hook this tool no
+ * longer has - and the `doc-structure-lint: 0.0.1` version marker, which the old
+ * loader never saw because it validated one template at a time and never looked
+ * at the file around them. Both are removed from the file itself.
+ *
+ * Everything else validates unchanged, which is what these tests pin: section
+ * keys with spaces (`before you start`, `Next steps`), `$ref` components,
+ * `sequence`, and nested `sections`.
+ */
+describe("the repo's own templates.yaml", () => {
+  const source = join(repoRoot, "templates.yaml");
+
+  // It is the file the README teaches from, so "it loads" is a real assertion,
+  // not a formality. Both blockers named above have been removed from it: the
+  // `instructions:` rejection is pinned against a dedicated fixture instead.
+  it("loads and validates as shipped", async () => {
+    const file = await loadTemplateFile(source);
+    expect(Object.keys(file.templates ?? {})).toEqual(
+      expect.arrayContaining(["how-to", "api-operation", "Sample"]),
+    );
+  });
+
+  it("keeps the section shapes the old loader never validated", async () => {
+    const raw = await readFile(source, "utf8");
+    const dereferenced = await dereference<Record<string, unknown>>(
+      parseYaml(raw) as Record<string, unknown>,
+    );
+
+    const file = validateTemplateFile(dereferenced, "templates.yaml");
+
+    // Section keys with spaces, at both the top and nested levels.
+    const howTo = file.templates?.["how-to"]?.sections?.["title"];
+    expect(howTo?.sections?.["before you start"]?.heading?.const).toBe("Before you start");
+
+    const intro = file.templates?.["Sample"]?.sections?.["Introduction"];
+    // `$ref: "#/components/sections/Next steps"`, resolved before validation.
+    expect(intro?.sections?.["Next steps"]?.heading?.const).toBe("Next steps");
+    expect(intro?.sections?.["Next steps"]?.required).toBe(false);
+    // `sequence`, and a default filled in on a nested rule.
+    expect(intro?.sequence).toEqual([{ paragraphs: { min: 2 } }]);
+    expect(intro?.sections?.["Prerequisites"]?.required).toBe(true);
+
+    // `$ref: "#/components/parameters"` on a section with a heading pattern.
+    const params = file.templates?.["api-operation"]?.sections?.["request-parameters"];
+    expect(params?.heading?.pattern).toBe("^Parameters|Request Parameters$");
+  });
+});
+
+describe("loadTemplate", () => {
+  it("returns the only template in a file with no fragment", async () => {
+    const template = await loadTemplate(join(fixtures, "single.yaml"));
+    expect(template.types).toEqual(["how-to"]);
+  });
+
+  it("selects a template with a `#` fragment", async () => {
+    const template = await loadTemplate(join(fixtures, "multi.yaml#reference"));
+    expect(template.types).toEqual(["reference"]);
+    expect(template.sections?.["syntax"]?.heading?.const).toBe("Syntax");
+  });
+
+  it("lists the available names when a multi-template file has no fragment", async () => {
+    const source = join(fixtures, "multi.yaml");
+    const message = await rejectionMessage(loadTemplate(source));
+    expect(message).toContain("defines 2 templates");
+    expect(message).toContain('name one with a "#" fragment');
+    expect(message).toContain("how-to");
+    expect(message).toContain("reference");
+  });
+
+  it("lists the available names when the fragment names nothing", async () => {
+    const message = await rejectionMessage(loadTemplate(join(fixtures, "multi.yaml#nope")));
+    expect(message).toContain('no template named "nope"');
+    expect(message).toContain("how-to, reference");
+  });
+});
+
+describe("resolveExtends", () => {
+  const library: Record<string, Template> = {
+    base: {
+      types: ["how-to"],
+      additionalSections: true,
+      sections: {
+        overview: { heading: { const: "Overview" }, paragraphs: { min: 1 } },
+        "see also": { required: false, heading: { const: "See also" } },
+        task: {
+          sections: {
+            steps: { heading: { const: "Steps" }, lists: { min: 1 } },
+            caveats: { required: false },
+          },
+        },
+      },
+    },
+    child: {
+      extends: "base",
+      sections: {
+        overview: { heading: { const: "Introduction" }, paragraphs: { min: 2 } },
+        // Tightens one nested rule. Its siblings under `task`, and `task`'s own
+        // keys, must survive.
+        task: { sections: { caveats: { required: true } } },
+      },
+    },
+  };
+
+  const load: TemplateResolver = async (ref) => {
+    const template = library[ref];
+    if (!template) throw new MooseLintError(`no such template: ${ref}`);
+    return template;
+  };
+
+  it("returns a template with no `extends` unchanged", async () => {
+    const base = library["base"]!;
+    expect(await resolveExtends(base, load)).toBe(base);
+  });
+
+  it("overrides sections by key and inherits every key the child omits", async () => {
+    const merged = await resolveExtends(library["child"]!, load);
+
+    expect(merged.sections?.["overview"]?.heading?.const).toBe("Introduction");
+    // The child named only `heading`, so the parent's other rules survive.
+    expect(merged.sections?.["overview"]?.paragraphs?.min).toBe(1);
+    expect(merged.sections?.["see also"]?.heading?.const).toBe("See also");
+    expect(merged.types).toEqual(["how-to"]);
+    expect(merged.additionalSections).toBe(true);
+    // The chain is resolved, so nothing downstream tries to resolve it again.
+    expect(merged.extends).toBeUndefined();
+  });
+
+  it("merges nested `sections` by key, all the way down", async () => {
+    // Tightening one nested section must not discard the siblings the parent
+    // declared around it.
+    const deep: Record<string, Template> = {
+      base: {
+        sections: {
+          Introduction: {
+            paragraphs: { min: 2 },
+            sections: {
+              Prerequisites: { heading: { const: "Prerequisites" } },
+              Setup: { heading: { const: "Setup" }, paragraphs: { max: 5 } },
+            },
+          },
+        },
+      },
+      narrower: {
+        extends: "base",
+        sections: {
+          Introduction: {
+            sections: {
+              Setup: { heading: { const: "Installation" } },
+              Cleanup: { heading: { const: "Cleanup" } },
+            },
+          },
+        },
+      },
+    };
+    const loadDeep: TemplateResolver = async (ref) => deep[ref]!;
+
+    const intro = (await resolveExtends(deep["narrower"]!, loadDeep)).sections?.["Introduction"];
+
+    expect(intro?.paragraphs?.min).toBe(2);
+    expect(intro?.sections?.["Prerequisites"]?.heading?.const).toBe("Prerequisites");
+    expect(intro?.sections?.["Setup"]?.heading?.const).toBe("Installation");
+    expect(intro?.sections?.["Setup"]?.paragraphs?.max).toBe(5);
+    // Parent order first, so inherited sections keep the document order the
+    // parent declared and child-only additions land at the end.
+    expect(Object.keys(intro?.sections ?? {})).toEqual(["Prerequisites", "Setup", "Cleanup"]);
+  });
+
+  // `sections` is a container, not a rule. Replacing it wholesale would mean
+  // tightening one nested section silently discarded every sibling the parent
+  // declared - which is the opposite of what `extends` is for.
+  it("merges nested sections instead of replacing the branch", async () => {
+    const merged = await resolveExtends(library["child"]!, load);
+    const task = merged.sections?.["task"];
+
+    expect(Object.keys(task?.sections ?? {})).toEqual(["steps", "caveats"]);
+    expect(task?.sections?.["steps"]?.heading?.const).toBe("Steps");
+    expect(task?.sections?.["steps"]?.lists?.min).toBe(1);
+    expect(task?.sections?.["caveats"]?.required).toBe(true);
+  });
+
+  // A section's own rules stay units: overriding `paragraphs` replaces it
+  // rather than merging a child `min` into a parent `max`.
+  it("replaces a content rule rather than merging into it", async () => {
+    const merged = await resolveExtends(library["child"]!, load);
+    expect(merged.sections?.["overview"]?.paragraphs).toEqual({ min: 2 });
+  });
+
+  it("keeps the parent's section order, with child-only additions last", async () => {
+    const merged = await resolveExtends(library["child"]!, load);
+    expect(Object.keys(merged.sections ?? {})).toEqual([
+      "overview",
+      "see also",
+      "task",
+    ]);
+  });
+
+  it("leaves the parent untouched", async () => {
+    await resolveExtends(library["child"]!, load);
+    expect(library["base"]?.sections?.["overview"]?.heading?.const).toBe("Overview");
+    expect(Object.keys(library["base"]?.sections ?? {})).toEqual([
+      "overview",
+      "see also",
+      "task",
+    ]);
+    // Deep merge must copy, not mutate, the parent's nested branch.
+    expect(library["base"]?.sections?.["task"]?.sections?.["caveats"]?.required).toBe(
+      false,
+    );
+  });
+
+  it("resolves an `extends` that points into a file", async () => {
+    const child = await loadTemplate(join(fixtures, "extends.yaml#child"));
+    const merged = await resolveExtends(child, (ref) => loadTemplate(join(fixtures, ref)));
+
+    expect(merged.sections?.["overview"]?.heading?.const).toBe("Introduction");
+    expect(merged.sections?.["overview"]?.paragraphs?.min).toBe(2);
+    expect(merged.sections?.["see also"]?.heading?.const).toBe("See also");
+    expect(merged.additionalSections).toBe(true);
+    expect(merged.extends).toBeUndefined();
+  });
+
+  it("detects a cycle and names the chain", async () => {
+    const cyclic: Record<string, Template> = {
+      a: { extends: "b" },
+      b: { extends: "a" },
+    };
+    const loadCyclic: TemplateResolver = async (ref) => cyclic[ref]!;
+
+    const message = await rejectionMessage(resolveExtends(cyclic["a"]!, loadCyclic));
+    expect(message).toContain('Template "extends" cycle');
+    expect(message).toContain("b -> a -> b");
+  });
+
+  it("detects a template that extends itself", async () => {
+    const selfish: Record<string, Template> = { me: { extends: "me" } };
+    const message = await rejectionMessage(
+      resolveExtends(selfish["me"]!, async (ref) => selfish[ref]!),
+    );
+    expect(message).toContain("me -> me");
+  });
+});
+
+describe("the template schema", () => {
+  it("accepts an empty section rule", () => {
+    // A bare slot with no constraints is how an unconstrained positional
+    // section is written.
+    const file = validateTemplateFile(
+      { templates: { "how-to": { sections: { task: {} } } } },
+      "empty.yaml",
+    );
+    const task = file.templates?.["how-to"]?.sections?.["task"];
+    expect(task?.required).toBe(true);
+    expect(task?.heading).toBeUndefined();
+  });
+
+  it("accepts `repeat` on a section rule", () => {
+    const file = validateTemplateFile(
+      { templates: { "how-to": { sections: { task: { repeat: true } } } } },
+      "repeat.yaml",
+    );
+    expect(file.templates?.["how-to"]?.sections?.["task"]?.repeat).toBe(true);
+    // Defaulted off, so a plain slot claims exactly one section.
+    const plain = validateTemplateFile(
+      { templates: { "how-to": { sections: { task: {} } } } },
+      "repeat.yaml",
+    );
+    expect(plain.templates?.["how-to"]?.sections?.["task"]?.repeat).toBe(false);
+  });
+
+  it("accepts `types` and `extends` on a template", () => {
+    const file = validateTemplateFile(
+      { templates: { "how-to": { types: ["how-to", "howto"], extends: "tgdp:how-to:1" } } },
+      "types.yaml",
+    );
+    expect(file.templates?.["how-to"]?.types).toEqual(["how-to", "howto"]);
+    expect(file.templates?.["how-to"]?.extends).toBe("tgdp:how-to:1");
+  });
+
+  it("rejects an unknown key at the top level", () => {
+    const message = thrownMessage(() =>
+      validateTemplateFile({ templates: {}, "doc-structure-lint": "0.0.1" }, "legacy.yaml"),
+    );
+    expect(message).toContain("legacy.yaml");
+    expect(message).toContain("doc-structure-lint");
+  });
+
+  it("requires a `templates` key", () => {
+    const message = thrownMessage(() => validateTemplateFile({ info: {} }, "empty.yaml"));
+    expect(message).toContain("must have required property 'templates'");
+  });
+
+  it("rejects a heading key that is not `const` or `pattern`", () => {
+    const message = thrownMessage(() =>
+      validateTemplateFile(
+        { templates: { a: { sections: { s: { heading: { constant: "Overview" } } } } } },
+        "typo.yaml",
+      ),
+    );
+    expect(message).toContain("/templates/a/sections/s/heading");
+    expect(message).toContain("constant");
+  });
+
+  it("rejects a sequence item that names two content kinds", () => {
+    const message = thrownMessage(() =>
+      validateTemplateFile(
+        {
+          templates: {
+            a: { sections: { s: { sequence: [{ paragraphs: { min: 1 }, code_blocks: {} }] } } },
+          },
+        },
+        "sequence.yaml",
+      ),
+    );
+    expect(message).toContain("/templates/a/sections/s/sequence/0");
+  });
+
+  it("rejects a top-level value that is not an object", () => {
+    const message = thrownMessage(() => validateTemplateFile("nope", "scalar.yaml"));
+    expect(message).toContain("scalar.yaml");
+    expect(message).toContain("must be object");
+  });
+});
