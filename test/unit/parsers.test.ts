@@ -114,6 +114,48 @@ describe("markdown parser", () => {
     expect(Array.isArray(tree.frontmatter!.tags)).toBe(true);
   });
 
+  // Docusaurus, Hugo, and Starlight render the page title from frontmatter, so
+  // their pages start at `##`. Read literally such a page has no top-level
+  // section, and every doctype template misaligns against it.
+  describe("a frontmatter title standing in for a missing H1", () => {
+    it("becomes the top-level section", () => {
+      const tree = parse("---\ntitle: Install the widget\n---\n\n## Overview\n\nWhy.\n");
+      const root = tree.sections[0]!;
+      expect(root.level).toBe(1);
+      expect(root.title).toBe("Install the widget");
+      expect(root.sections.map((s) => s.title)).toEqual(["Overview"]);
+    });
+
+    it("is anchored on the frontmatter, where the title actually is", () => {
+      const tree = parse("---\ntitle: A\n---\n\n## Overview\n");
+      expect(tree.sections[0]!.headingPosition?.start.line).toBe(1);
+      expect(tree.sections[0]!.headingPosition?.start.offset).toBe(0);
+    });
+
+    it("does not displace a real H1", () => {
+      const tree = parse("---\ntitle: From frontmatter\n---\n\n# From the body\n");
+      expect(tree.sections.map((s) => s.title)).toEqual(["From the body"]);
+    });
+
+    it("is not synthesized without a title", () => {
+      const tree = parse("---\ntype: how-to\n---\n\n## Overview\n");
+      expect(tree.sections[0]!.title).toBe("Overview");
+      expect(tree.sections[0]!.level).toBe(2);
+    });
+
+    it("ignores a non-string or empty title", () => {
+      expect(parse("---\ntitle: []\n---\n\n## A\n").sections[0]!.level).toBe(2);
+      expect(parse('---\ntitle: ""\n---\n\n## A\n').sections[0]!.level).toBe(2);
+    });
+
+    it("takes the content before the first heading with it", () => {
+      const tree = parse("---\ntitle: A\n---\n\nLead prose.\n\n## Overview\n");
+      const root = tree.sections[0]!;
+      expect(root.content.map((n) => n.kind)).toEqual(["paragraph"]);
+      expect(root.sections.map((s) => s.title)).toEqual(["Overview"]);
+    });
+  });
+
   it("reports no frontmatter when there is none", () => {
     const tree = parse("# A\n");
     expect(tree.frontmatter).toBeNull();

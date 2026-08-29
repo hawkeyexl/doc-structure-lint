@@ -400,30 +400,42 @@ mirrors, so `npm run check:tgdp-pin` asks GitLab whether upstream has moved past
 the pin and reports what moving it would involve. It is a report, not a gate:
 upstream moving does not make the pinned templates wrong, it makes them old.
 
-### Two things that will bite you
+### The H1, and pages that have none
 
-**The H1 is a rule.** Every built-in models upstream's H1 as its top-level
-section, so a page whose title lives only in frontmatter — body starting at
-`##` — does not match, and you get a cascade rather than one finding:
+Every built-in models upstream's H1 as its top-level section, because that is
+how the published templates are written. Docusaurus, Hugo, and Starlight all
+render the page title from frontmatter, so their pages legitimately start at
+`##` and have no H1 to match.
 
-```text
-✗ headless.md
-    6:1  missing_section  Overview: Missing section "Overview"
-    6:1  missing_section  Overview: Missing section "task"
-    6:1  missing_section  Overview: Missing section "See also"
-    10:1  unexpected_section  Install it: Unexpected section "Install it". Set additionalSections: true to allow sections the template does not describe.
-    14:1  unexpected_section  See also: Unexpected section "See also". Set additionalSections: true to allow sections the template does not describe.
+Those pages work. When a page carries a frontmatter `title` and its body has no
+H1, that title *is* the document's H1 — findings about it are anchored on the
+frontmatter, where the title actually lives:
 
-1 file checked, 0 passed, 1 failed, 0 skipped
+```markdown
+---
+type: how-to
+title: Install the widget
+---
+
+## Overview
 ```
 
-If your site renders the title from frontmatter and your bodies start at `##`,
-the built-ins are not for you as shipped. Write the doctype yourself, or
-`extends` a built-in and replace its top-level rule.
+```text
+✓ install.md
+
+1 file checked, 1 passed, 0 failed, 0 skipped
+```
+
+A page with neither an H1 nor a frontmatter `title` has no top-level section for
+a doctype template to match, and will report one. That is a page a reader would
+also struggle to name.
+
+### One thing that will bite you
 
 **`tgdp:how-to:1.6` requires `See also`.** Upstream includes it unconditionally
-and never marks it optional, so the derived template requires it. If you
-disagree, [inherit and relax it](#reuse) — one file, four lines.
+and never marks it optional, so the derived template requires it — and plenty of
+real how-tos have none. Rather than substitute our judgment for TGDP's, relaxing
+it is the worked [`extends` example](#reuse): one file, four lines.
 
 ## Using it as a library
 

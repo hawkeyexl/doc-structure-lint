@@ -16,6 +16,7 @@ import { extractFrontmatter, locateFrontmatter } from "docmeta";
 import type { DocumentParser, DocumentTree, Position } from "../types.js";
 import { MooseLintError } from "../types.js";
 import { documentEnd, toBlocks } from "./mdast.js";
+import type { Block } from "./sectionize.js";
 import { sectionize } from "./sectionize.js";
 
 const markdownProcessor = unified()
@@ -60,6 +61,37 @@ interface Parseable {
   parse(content: string): unknown;
 }
 
+/**
+ * Treat a frontmatter `title` as the document's H1 when the body has none.
+ *
+ * Docusaurus, Hugo, and Starlight all render the page title from frontmatter,
+ * so their pages legitimately start at `##`. Read literally, such a page has no
+ * top-level section, and every doctype template - which models the title as its
+ * outermost rule, because that is how the published templates are written -
+ * misaligns against it and reports a cascade. The page is not malformed; the
+ * title simply is not written where a naive reading looks for it.
+ *
+ * So a synthetic H1 block is prepended, positioned on the frontmatter that
+ * actually carries the title. Everything downstream then sees the document the
+ * way a reader sees it rendered.
+ *
+ * Only when the body has no H1 of its own: prepending one where a real H1
+ * exists would nest the real title inside a synthetic parent, which is a
+ * different document.
+ */
+function withFrontmatterTitle(
+  blocks: Block[],
+  frontmatter: Record<string, unknown> | null,
+  position: Position | null,
+): Block[] {
+  const title = frontmatter?.["title"];
+  if (typeof title !== "string" || title.length === 0) return blocks;
+  if (position === null) return blocks;
+  if (blocks.some((b) => b.type === "heading" && b.level === 1)) return blocks;
+
+  return [{ type: "heading", level: 1, title, position }, ...blocks];
+}
+
 function parseWith(
   processor: Parseable,
   format: string,
@@ -80,12 +112,18 @@ function parseWith(
   const meta = extractFrontmatter(content, format);
   const tree = root as Parameters<typeof toBlocks>[0];
 
+  const frontmatter = meta.present ? meta.data : null;
+  const metaPosition = frontmatterPosition(content);
+
   return {
     format,
     filePath,
-    frontmatter: meta.present ? meta.data : null,
-    frontmatterPosition: frontmatterPosition(content),
-    sections: sectionize(toBlocks(tree), documentEnd(tree)),
+    frontmatter,
+    frontmatterPosition: metaPosition,
+    sections: sectionize(
+      withFrontmatterTitle(toBlocks(tree), frontmatter, metaPosition),
+      documentEnd(tree),
+    ),
   };
 }
 
