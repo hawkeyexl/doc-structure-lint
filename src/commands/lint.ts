@@ -26,6 +26,7 @@ import {
 import type { Template, TemplateFile } from "../core/template.js";
 import {
   classifyRef,
+  refRelativeTo,
   listBuiltins,
   loadResolvedTemplate,
   loadTemplateFile,
@@ -34,6 +35,7 @@ import {
   buildTypeIndex,
   knownTypes,
   resolveTemplateRef,
+  FILE_TEMPLATE_KEY,
   type Resolution,
   type TemplateOverride,
   type TypeIndexEntry,
@@ -332,9 +334,48 @@ async function lintOne(
       template: resolution.ref,
     });
 
+  // A page may not send the linter to a URL of its own choosing.
+  //
+  // Every other stage of the chain is operator input - a flag, a config file, a
+  // template file the operator passed. `$template` is the one that comes out of
+  // the document, and documents are exactly what this tool is pointed at
+  // untrusted: a docset from a fork, a contributor's branch, a vendored copy.
+  // Left open, one line of frontmatter makes the linting host issue an
+  // arbitrary request, which on CI means from inside the build network. The
+  // `$ref` hole this mirrors was closed in the template loader; this is the
+  // same hole one level up, where the ref itself is attacker-chosen.
+  //
+  // Refused rather than ignored, because silently falling through to `type`
+  // would lint the page against something other than what it asked for and say
+  // nothing. An operator who does want a remote template still has every other
+  // stage: name it in `templates:`, map it under `types:`, or pass --template.
+  if (
+    resolution.stage === "frontmatter-template" &&
+    classifyRef(resolution.ref).kind === "url"
+  ) {
+    return brokenTemplate(
+      new MooseLintError(
+        `${FILE_TEMPLATE_KEY} may not name a URL ("${resolution.ref}"): a document ` +
+          `must not choose what the linter fetches. Declare it in moose.config.yaml ` +
+          `under "templates:" or "types:", or pass it with --template.`,
+      ),
+    );
+  }
+
+  // A relative `$template` means "beside this page", not "beside wherever the
+  // tool happened to be invoked from". `extends` already follows that rule, and
+  // for the same reason: resolved against the process cwd, `$template:
+  // ./house.yaml` in `docs/guide.md` found the file only when the run started
+  // in `docs/` - so the page routed correctly from one directory and reported
+  // "Template file not found" from every other, including from CI.
+  const ref =
+    resolution.stage === "frontmatter-template"
+      ? refRelativeTo(ctx.absoluteOf?.(label) ?? label, resolution.ref)
+      : resolution.ref;
+
   let template: Template;
   try {
-    template = await ctx.getTemplate(resolution.ref);
+    template = await ctx.getTemplate(ref);
   } catch (err) {
     // One unloadable template must not abort a run over a whole tree; it is
     // reported against the pages that route to it.

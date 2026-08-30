@@ -130,6 +130,12 @@ export function buildTypeIndex(params: {
 }
 
 const matcherCache = new Map<string, (p: string) => boolean>();
+
+/** Drop the compiled override-glob matchers. See `clearCaches`. */
+export function clearMatcherCache(): void {
+  matcherCache.clear();
+}
+
 function matchesGlob(glob: string, filePath: string): boolean {
   let m = matcherCache.get(glob);
   if (!m) {

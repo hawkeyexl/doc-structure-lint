@@ -265,6 +265,63 @@ describe("--explain", () => {
   });
 });
 
+describe("a $template naming a URL", () => {
+  // Every other stage of the chain is operator input. `$template` is the one
+  // that comes out of the document, and documents are what this tool is pointed
+  // at untrusted - a fork's docset, a contributor's branch. Left open, one line
+  // of frontmatter makes the host issue an arbitrary request, on CI from inside
+  // the build network. No fetch may happen, so an unroutable host is not a
+  // sufficient assertion: the test would pass on a slow failure too.
+  it("is refused rather than fetched", async () => {
+    await file(
+      "guide.md",
+      "---\n$template: https://example.invalid/evil.yaml\n---\n\n# A\n",
+    );
+    const run = await runLint({ inputs: [dir], cwd: dir });
+    const finding = run.results[0]!.findings[0]!;
+
+    expect(finding.type).toBe("template_error");
+    expect(finding.message).toContain("$template may not name a URL");
+    expect(finding.message).toContain("--template");
+    expect(run.summary.failed).toBe(1);
+  });
+
+  // The operator keeps every other route to the same template, which is what
+  // makes refusing the document's choice a narrowing rather than a removal.
+  it("still allows the same URL when the operator names it", async () => {
+    await file("guide.md", "---\ntype: how-to\n---\n\n# A\n");
+    const run = await runLint({
+      inputs: [dir],
+      template: "tgdp:how-to:1.6",
+      cwd: dir,
+    });
+    expect(run.results[0]!.template).toBe("tgdp:how-to:1.6");
+    expect(
+      run.results[0]!.findings.some((f) => f.type === "template_error"),
+    ).toBe(false);
+  });
+
+  // A relative `$template` is a path inside the docset, not a network origin,
+  // so it is untouched by the refusal.
+  it("does not refuse a relative $template", async () => {
+    await file(
+      "house.yaml",
+      [
+        "templates:",
+        "  house:",
+        "    sections:",
+        "      title:",
+        "        additionalSections: true",
+        "",
+      ].join("\n"),
+    );
+    await file("guide.md", "---\n$template: ./house.yaml#house\n---\n\n# A\n");
+
+    const run = await runLint({ inputs: [join(dir, "guide.md")], cwd: dir });
+    expect(run.results[0]!.findings).toEqual([]);
+  });
+});
+
 describe("an unloadable template", () => {
   // One broken template must not abort a run over a whole tree.
   it("is reported against the pages that route to it, not thrown", async () => {

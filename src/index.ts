@@ -1,4 +1,25 @@
 /** Programmatic API for moose-lint. */
+import { clearTemplateCaches } from "./core/template-registry.js";
+import { clearMatcherCache } from "./core/resolve-template.js";
+import { clearPatternCache } from "./rules/index.js";
+
+/**
+ * Drop every process-lifetime cache: parsed built-ins, fetched template files,
+ * compiled override globs, and compiled heading patterns.
+ *
+ * A CLI run never needs this - it lints one docset and exits, and the caches
+ * are what stop a tree of one doctype from re-reading the same template per
+ * page. A long-lived host is the different case: the maps grow with the number
+ * of distinct refs and patterns seen, and a cached remote template is served
+ * for the life of the process, so one republished upstream is never picked up.
+ * Call this between runs, or when a template may have changed underneath.
+ */
+export function clearCaches(): void {
+  clearTemplateCaches();
+  clearMatcherCache();
+  clearPatternCache();
+}
+
 export { runLint, STDIN_LABEL } from "./commands/lint.js";
 export type {
   LintOptions,

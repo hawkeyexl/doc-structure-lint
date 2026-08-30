@@ -16,7 +16,9 @@ import {
   checkLists,
   checkParagraphs,
   checkSequence,
+  clearPatternCache,
   codeBlocksOf,
+  compilePattern,
   groupRuns,
   listsOf,
   paragraphsOf,
@@ -686,5 +688,37 @@ describe("checkSequence", () => {
     expect(messages(findings)).toEqual([
       "Expected at least 2 items in a list",
     ]);
+  });
+});
+
+describe("compilePattern", () => {
+  // Heading matching is quadratic by nature - every rule is asked about every
+  // section - so the same handful of patterns were recompiled hundreds of times
+  // over one page. Identity is the observable part of the memo.
+  it("returns one instance per pattern", () => {
+    expect(compilePattern("^Step ")).toBe(compilePattern("^Step "));
+    expect(compilePattern("^Step ")).not.toBe(compilePattern("^Other "));
+  });
+
+  // Sharing an instance is only safe while these carry no `g` or `y`, which are
+  // the flags that make `lastIndex` persist between calls. If this ever fails,
+  // the memo has to go, not the assertion.
+  it("compiles without the flags that would make sharing stateful", () => {
+    const regex = compilePattern("^Step ");
+    expect(regex.global).toBe(false);
+    expect(regex.sticky).toBe(false);
+    expect(regex.test("Step one")).toBe(true);
+    expect(regex.test("Step one")).toBe(true);
+  });
+
+  it("still names the template's own bad pattern, and does not memo it", () => {
+    expect(() => compilePattern("Step (")).toThrow(MooseLintError);
+    expect(() => compilePattern("Step (")).toThrow(/Invalid pattern "Step \("/);
+  });
+
+  it("recompiles after the cache is cleared", () => {
+    const before = compilePattern("^Cleared ");
+    clearPatternCache();
+    expect(compilePattern("^Cleared ")).not.toBe(before);
   });
 });

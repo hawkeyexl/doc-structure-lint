@@ -143,11 +143,29 @@ export type { ContentRun } from "./sequence.js";
  * through the same containment a template load failure gets, or one bad
  * pattern takes the whole run down with it.
  */
+const compiled = new Map<string, RegExp>();
+
 export function compilePattern(pattern: string): RegExp {
+  // Memoized because heading matching is quadratic by nature: the matcher asks
+  // every rule about every section, so a template with ten pattern rules against
+  // a twenty-section page compiled the same ten regexes two hundred times.
+  //
+  // Safe to share one instance: these are built with no flags, and `lastIndex`
+  // is only carried between calls by `g` and `y`. Adding either to this
+  // construction would make the cached regex stateful across sections.
+  const hit = compiled.get(pattern);
+  if (hit) return hit;
   try {
-    return new RegExp(pattern);
+    const regex = new RegExp(pattern);
+    compiled.set(pattern, regex);
+    return regex;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new MooseLintError(`Invalid pattern "${pattern}": ${reason}`);
   }
+}
+
+/** Drop the compiled-pattern memo. See `clearCaches` in the package root. */
+export function clearPatternCache(): void {
+  compiled.clear();
 }

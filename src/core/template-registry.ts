@@ -404,6 +404,22 @@ async function readText(ref: string): Promise<string> {
 
 const urlCache = new Map<string, TemplateFile>();
 
+/**
+ * Drop the parsed-template caches.
+ *
+ * Nothing in the CLI needs this: a process lints one docset and exits, and the
+ * caches are what keep a tree of one doctype from re-reading and re-validating
+ * the same template per page. It exists for the other caller - a long-lived
+ * process using this as a library - where the two behave differently: the
+ * memory grows with the number of distinct refs seen, and a `urlCache` entry
+ * for a remote template is served for the life of the process, so a template
+ * republished upstream is never picked up.
+ */
+export function clearTemplateCaches(): void {
+  builtinCache.clear();
+  urlCache.clear();
+}
+
 async function fetchText(ref: string, timeoutMs: number): Promise<string> {
   let res: Response;
   try {

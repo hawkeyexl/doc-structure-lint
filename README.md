@@ -95,6 +95,16 @@ Highest precedence first:
 Steps 3 and 5 are repo policy, written in
 [`moose.config.yaml`](#configuration).
 
+Step 2 is the only one a *document* controls, so it is the only one that cannot
+name a URL. A relative path or a built-in id is fine — `$template:
+./house.yaml#house` resolves beside the page that wrote it, not beside wherever
+you ran the command — but `$template: https://…` is refused with a
+`template_error`. Everything else in the chain is operator input, and letting a
+page choose a URL would mean linting a docset could make the machine doing the
+linting fetch whatever that docset asked for, from inside whatever network the
+CI job runs in. An operator who does want a remote template still has steps 1,
+3, 4, and 5.
+
 ### A missing `type` and an unknown one are different
 
 A page with **no `type`** that resolves to nothing is **skipped**. It is counted
