@@ -175,7 +175,7 @@ export function buildProgram(): Command {
     .option("-c, --config <path>", "path to moose.config.yaml")
     .option(
       "--explain",
-      "print how each file's template was chosen, and lint nothing (always exits 0)",
+      "print how each file's template was chosen, and lint nothing (always exits 0, unrouted pages included)",
     )
     .option("--as <format>", "force an input format (e.g. markdown, mdx)")
     .option(
@@ -240,6 +240,13 @@ export function buildProgram(): Command {
         if (text.length > 0) process.stdout.write(`${text}\n`);
         // `--explain` answers a question about configuration, so its exit code
         // reports whether it could answer it - not whether the docs are clean.
+        //
+        // That covers routing failures too: a page whose `type` matches no
+        // template is a answered question, not an unanswered one, so it exits
+        // 0 like everything else here. Automation must not read this code as
+        // "everything routed" - the ordinary run is what reports that, with
+        // exit 1. Said in `--help` and the README, because the distinction is
+        // invisible from the exit code alone.
         process.exitCode = explain ? 0 : run.summary.failed > 0 ? 1 : 0;
       } catch (err) {
         fail(err);

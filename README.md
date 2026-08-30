@@ -182,6 +182,12 @@ the document — `docs/configure.md` is routed and still fails the lint above �
 `--explain` exits `0` however the docs look. It answers a question about
 configuration, not about the documents.
 
+That includes pages it could not route at all: a `type` no template serves
+prints a `✗` line and still exits `0`, because "nothing serves this type" is an
+answer. So do not gate CI on `--explain`'s exit code — it will pass over a
+docset whose every page is unrouted. The ordinary run is what reports that, and
+exits `1`.
+
 ## Commands
 
 ```text
