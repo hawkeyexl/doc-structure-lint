@@ -596,7 +596,19 @@ export function refRelativeTo(baseRef: string, ref: string): string {
   if (classifyRef(base).kind !== "file" || isAbsolute(base)) return ref;
 
   const { base: fromBase } = splitFragment(baseRef);
-  if (classifyRef(fromBase).kind !== "file") return ref;
+  const from = classifyRef(fromBase).kind;
+
+  // A template fetched over HTTP names its neighbours the same way a local one
+  // does, and `./base.yaml` beside it is a URL, not a path. Resolved as a path
+  // it became a read of the process working directory - a local file quietly
+  // standing in for the remote one, or a "file not found" naming a path that
+  // appears nowhere in the template.
+  if (from === "url") {
+    const rebased = new URL(base, fromBase).href;
+    return fragment === null ? rebased : `${rebased}#${fragment}`;
+  }
+
+  if (from !== "file") return ref;
 
   const rebased = resolvePath(dirname(fromBase), base);
   return fragment === null ? rebased : `${rebased}#${fragment}`;

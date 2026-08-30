@@ -211,29 +211,93 @@ function codeNode(pre: Element): CodeNode {
 
 /**
  * `<li>` children of a list, with their own content mapped recursively.
- *
- * An item whose text is not wrapped in a block element gets a synthesized
- * paragraph, because mdast puts a list item's principal text in a paragraph
- * child and `lists: {items: {paragraphs: {min: 1}}}` has to count the same
- * thing in every format. Without it `<li>text</li>` had no children at all
- * while its Markdown, AsciiDoc, and reStructuredText twins had one - and
- * `<li><p>text</p></li>` in the same document had one too, so the rule did not
- * even mean one thing within HTML.
  */
 function listItems(list: Element): ListItemNode[] {
   const items: ListItemNode[] = [];
   for (const child of list.childNodes) {
     if (!defaultTreeAdapter.isElementNode(child)) continue;
     if (tagOf(child) !== "li") continue;
-
-    const text = flatText(child);
-    const children = contentIn(child);
-    if (children.length === 0 && text.length > 0) {
-      children.push({ kind: "paragraph", position: positionOf(child), text });
-    }
-    items.push({ position: positionOf(child), text, children });
+    items.push({
+      position: positionOf(child),
+      text: flatText(child),
+      children: itemChildren(child),
+    });
   }
   return items;
+}
+
+/**
+ * One list item's content, with the item's own prose kept as a paragraph.
+ *
+ * An item's text is rarely wrapped in a block element, but mdast puts a list
+ * item's principal text in a `paragraph` child regardless, and
+ * `lists: {items: {paragraphs: {min: 1}}}` has to count the same thing in
+ * every format. So the loose text is gathered into one, in the position it
+ * occupies among the item's blocks.
+ *
+ * Gathering it rather than checking whether the item has any children is what
+ * makes the two cases agree. `<li>text</li>` and `<li><p>text</p></li>` were
+ * already reconciled; `<li>Parent<ul>…</ul></li>` was not, because the nested
+ * list is a child, so the item looked accounted for and `Parent` became a
+ * paragraph nothing counted - while its Markdown, AsciiDoc, and reST twins all
+ * counted one.
+ *
+ * A container element that yields no blocks of its own is inline in practice -
+ * `<strong>`, `<a>`, `<code>` - so its text joins the prose around it instead
+ * of being dropped, which is again what mdast does with the same markup.
+ */
+function itemChildren(li: Element): ContentNode[] {
+  const out: ContentNode[] = [];
+  let text = "";
+  let span: Position | null = null;
+
+  const extend = (node: Located): void => {
+    const at = positionOf(node);
+    span = span === null ? at : { start: span.start, end: at.end };
+  };
+
+  const flush = (): void => {
+    const value = text.trim();
+    const at = span;
+    text = "";
+    span = null;
+    if (value.length === 0) return;
+    out.push({ kind: "paragraph", position: at ?? positionOf(li), text: value });
+  };
+
+  for (const child of li.childNodes) {
+    if (defaultTreeAdapter.isTextNode(child)) {
+      text += child.value;
+      if (child.value.trim().length > 0) extend(child as Located);
+      continue;
+    }
+    if (!defaultTreeAdapter.isElementNode(child)) continue;
+
+    const tag = tagOf(child);
+    const role = roleOf(tag);
+    if (role === "heading" || role === "opaque") continue;
+
+    if (role === "content") {
+      flush();
+      const node = toContentNode(child, tag);
+      if (node) out.push(node);
+      continue;
+    }
+
+    const nested = contentIn(child);
+    if (nested.length > 0) {
+      flush();
+      out.push(...nested);
+      continue;
+    }
+
+    const inline = flatText(child);
+    text += inline;
+    if (inline.trim().length > 0) extend(child);
+  }
+
+  flush();
+  return out;
 }
 
 function toContentNode(el: Element, tag: string): ContentNode | null {

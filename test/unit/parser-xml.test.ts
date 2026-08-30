@@ -1,8 +1,9 @@
 /**
  * The XML parser.
  *
- * The parser is imported directly rather than through the registry, which
- * still hands `.xml` to the roadmap stub until this is wired in.
+ * The parser is imported directly rather than through the registry, so a
+ * failure here is this parser's and not the registry's - routing has its own
+ * tests.
  */
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";

@@ -20,7 +20,9 @@ import { asciidocParser } from "../../src/parsers/asciidoc.js";
 import { rstParser } from "../../src/parsers/rst.js";
 import { validateDocument } from "../../src/core/validator.js";
 import { refRelativeTo } from "../../src/core/template-registry.js";
+import { fencedPosition } from "../../src/parsers/metadata.js";
 import type { Template } from "../../src/core/template.js";
+import type { DocumentTree, ListItemNode } from "../../src/types.js";
 
 let dir: string;
 
@@ -84,6 +86,37 @@ describe("the matcher does not strand sections a later rule needs", () => {
       matches.filter((m) => m.name === "symptom").map((m) => m.section.title),
     ).toEqual(["Symptom A", "Symptom B"]);
   });
+
+  // The bounded scan tested `headingMatches` before `claimedLater`, so a
+  // section satisfying both rules went to whichever came first in the template.
+  // A loose rule reaching a heading a stricter later rule names exactly took
+  // it, and that rule then reported missing - the cascade, one section earlier
+  // than the case above.
+  it("does not let a loose rule take a heading a later exact rule names", () => {
+    const doc = subsectionsOf("# T\n\n## Symptom summary\n");
+    const { matches, findings } = matchSections(doc, {
+      symptom: { heading: { pattern: "^Symptom" }, required: false, repeat: true },
+      resolution: { heading: { const: "Symptom summary" } },
+    });
+
+    expect(findings).toEqual([]);
+    expect(matches.map((m) => m.name)).toEqual(["resolution"]);
+  });
+
+  // The other direction of the same guard, and the reason it is asymmetric.
+  // Yielding to any later rule would make a required rule stand aside for an
+  // optional one, giving up the section it needs for a match the template says
+  // it can do without - a clean document reporting a missing section.
+  it("does not make a required rule yield to an optional later one", () => {
+    const doc = subsectionsOf("# T\n\n## Symptom summary\n");
+    const { matches, findings } = matchSections(doc, {
+      symptom: { heading: { pattern: "^Symptom" } },
+      summary: { heading: { const: "Symptom summary" }, required: false },
+    });
+
+    expect(findings).toEqual([]);
+    expect(matches.map((m) => m.name)).toEqual(["symptom"]);
+  });
 });
 
 describe("a run that checks nothing", () => {
@@ -143,6 +176,18 @@ describe("template refs resolve against the file that declared them", () => {
   it("re-bases a relative ref onto the declaring file's directory", () => {
     const rebased = refRelativeTo(join(dir, "tpl", "child.yaml"), "./base.yaml#b");
     expect(rebased.replace(/\\/g, "/")).toContain("tpl/base.yaml#b");
+  });
+
+  // A URL base fell through to "return unchanged", so the next load classified
+  // `./base.yaml` as a file and read it from the process working directory - a
+  // local file quietly standing in for the remote one.
+  it("re-bases a relative ref declared by a URL template onto that URL", () => {
+    expect(refRelativeTo("https://x.test/t/child.yaml", "./base.yaml")).toBe(
+      "https://x.test/t/base.yaml",
+    );
+    expect(refRelativeTo("https://x.test/t/child.yaml#c", "../base.yaml#b")).toBe(
+      "https://x.test/base.yaml#b",
+    );
   });
 
   // `.then(resolveExtends)` passes one argument, so the injected resolver was
@@ -224,6 +269,32 @@ describe("a bare list item counts the same in every format", () => {
     },
   };
 
+  // The same rule, one level down. `<li>Parent<ul>…</ul></li>` has a child, so
+  // the "no children" test that reconciled the bare case saw nothing to fix and
+  // `Parent` became prose nothing counted - while mdast gives the item both a
+  // paragraph and the nested list.
+  it("counts an item's own prose even when the item also nests a list", () => {
+    const paragraphsOfFirstItem = (tree: DocumentTree): number => {
+      const list = tree.sections[0]!.sections[0]!.content.find(
+        (c) => c.kind === "list",
+      );
+      const item = (list as { items: ListItemNode[] }).items[0]!;
+      return item.children.filter((c) => c.kind === "paragraph").length;
+    };
+
+    const md = markdownParser.parse(
+      "# T\n\n## Steps\n\n- Parent\n  - nested\n",
+      "a.md",
+    );
+    const html = htmlParser.parse(
+      "<html><body><h1>T</h1><h2>Steps</h2><ul><li>Parent<ul><li>nested</li></ul></li></ul></body></html>",
+      "a.html",
+    );
+
+    expect(paragraphsOfFirstItem(md)).toBe(1);
+    expect(paragraphsOfFirstItem(html)).toBe(paragraphsOfFirstItem(md));
+  });
+
   it("agrees across markdown, html, xml, asciidoc, and rst", () => {
     const trees = [
       markdownParser.parse("# T\n\n## Steps\n\n- one\n- two\n", "a.md"),
@@ -285,6 +356,26 @@ describe("metadata is read from both a fence and the format's own header", () =>
         "L1:T",
       ]);
     }
+  });
+});
+
+describe("the span of a metadata fence", () => {
+  // The end column was fixed at 1, which is right only when the block ends with
+  // a newline. A page whose closing fence is the last thing in the file got an
+  // end that pointed at the start of the fence line while `offset` pointed past
+  // it - the two disagreeing, on the position every synthetic H1 is anchored to.
+  it("ends past the closing delimiter when the file ends without a newline", () => {
+    const withNewline = "---\ntype: how-to\n---\n";
+    const withoutNewline = "---\ntype: how-to\n---";
+
+    const a = fencedPosition(withNewline)!;
+    const b = fencedPosition(withoutNewline)!;
+
+    expect(a.end.offset).toBe(withNewline.length);
+    expect(a.end).toMatchObject({ line: 4, column: 1 });
+
+    expect(b.end.offset).toBe(withoutNewline.length);
+    expect(b.end).toMatchObject({ line: 3, column: 4 });
   });
 });
 

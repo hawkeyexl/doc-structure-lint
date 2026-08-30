@@ -86,14 +86,29 @@ function findingAt(
 /**
  * Could a later *anchored* rule claim this section by its heading?
  *
- * Used to end a slot's run. Slots are excluded on purpose: a slot claims
- * anything, so counting them would make every lookahead true and stop every
- * slot before it consumed a single section.
+ * Used to end a slot's run, and to stop an earlier rule taking a section a
+ * later one names. Slots are excluded on purpose: a slot claims anything, so
+ * counting them would make every lookahead true and stop every slot before it
+ * consumed a single section.
+ *
+ * `requiredOnly` separates "who describes this section better" from "who
+ * cannot do without it", and the two callers want different answers. A slot,
+ * or an optional rule, yields to any later rule that names the section: the
+ * named rule describes it better, and standing aside costs nothing either way.
+ * A *required* rule yields only to another required rule - giving up a section
+ * it needs so an optional rule can have one the template says it can live
+ * without turns a clean document into a missing-section finding.
  */
-function claimedLater(rules: Rule[], from: number, section: SectionNode): boolean {
+function claimedLater(
+  rules: Rule[],
+  from: number,
+  section: SectionNode,
+  requiredOnly = false,
+): boolean {
   for (let i = from; i < rules.length; i++) {
     const { rule } = rules[i]!;
     if (isSlot(rule)) continue;
+    if (requiredOnly && !isRequired(rule)) continue;
     if (headingMatches(section.title, rule)) return true;
   }
   return false;
@@ -144,9 +159,15 @@ function findForward(
   rules: Rule[],
   ri: number,
 ): number {
+  const requiredOnly = isRequired(rule);
   for (let i = from; i < sections.length; i++) {
+    // The later claim is tested first, because a section can satisfy both
+    // rules and only one of them can have it. A loose rule reaching a section
+    // a stricter later rule names exactly - `^Symptom` reaching `Symptom
+    // summary` - would otherwise take it and leave that rule missing, which is
+    // the same cascade the bounded scan exists to prevent, one section earlier.
+    if (claimedLater(rules, ri + 1, sections[i]!, requiredOnly)) return -1;
     if (headingMatches(sections[i]!.title, rule)) return i;
-    if (claimedLater(rules, ri + 1, sections[i]!)) return -1;
   }
   return -1;
 }
@@ -222,8 +243,15 @@ export function matchSections(
     // repeating rule must not silently demote it to one match, because the
     // sections it would have claimed then become unexpected and, worse, are
     // never descended into.
+    // The section at the cursor is the common case and is taken directly - but
+    // it goes through the same lookahead as a scanned-to one. Without that, a
+    // rule loose enough to match a heading a later rule names exactly took it
+    // whenever it happened to sit at the cursor, and the bounded scan below,
+    // which does check, was never consulted.
     const at =
-      cursor < sections.length && headingMatches(sections[cursor]!.title, rule)
+      cursor < sections.length &&
+      headingMatches(sections[cursor]!.title, rule) &&
+      !claimedLater(rules, ri + 1, sections[cursor]!, isRequired(rule))
         ? cursor
         : findForward(sections, cursor, rule, rules, ri);
 

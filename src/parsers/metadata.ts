@@ -23,12 +23,18 @@ export function fencedPosition(content: string): Position | null {
   if (!loc) return null;
   const before = content.slice(0, loc.openStart);
   const startLine = before.split("\n").length;
-  const inner = content.slice(loc.openStart, loc.closeEnd);
+  const lines = content.slice(loc.openStart, loc.closeEnd).split("\n");
   return {
     start: { line: startLine, column: 1, offset: loc.openStart },
     end: {
-      line: startLine + inner.split("\n").length - 1,
-      column: 1,
+      line: startLine + lines.length - 1,
+      // Taken from the last line's own length rather than fixed at 1. When the
+      // block ends with a newline that line is empty and the column is 1
+      // anyway; when the closing fence ends at EOF without one, the half-open
+      // end is just past the delimiter - which `offset` already said, so a
+      // fixed column contradicted it and pointed a reader's caret at the start
+      // of the fence line instead of its end.
+      column: lines[lines.length - 1]!.length + 1,
       offset: loc.closeEnd,
     },
   };

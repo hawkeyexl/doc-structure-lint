@@ -494,8 +494,8 @@ describe("rst parser: registration", () => {
 /**
  * The payoff. `tgdp:how-to:1.6` is a real published doctype, and neither it nor
  * anything between it and the tree knows this format exists. Imported directly
- * rather than through the registry, which still resolves `.rst` to a stub until
- * this parser is wired in.
+ * rather than through the registry, so a failure here is this parser's and not
+ * the registry's - routing has its own tests.
  */
 describe("rst parser against tgdp:how-to:1.6", () => {
   it("lints the conforming fixture clean", async () => {

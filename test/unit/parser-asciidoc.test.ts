@@ -348,8 +348,10 @@ it("reports input Asciidoctor cannot load as an operational error naming the fil
 });
 
 /**
- * The fixtures, end to end. The registry still resolves `.adoc` to the stub, so
- * this imports the parser directly rather than going through `parserForExtension`.
+ * The fixtures, end to end. The parser is imported directly rather than through
+ * `parserForExtension`, so a failure here is this parser's and not the
+ * registry's - routing has its own tests, and a broken registry entry would
+ * otherwise fail every parser's suite at once.
  */
 describe("the AsciiDoc format fixtures, against tgdp:how-to:1.6", () => {
   it("routes how-to.adoc on the doctype in its header", async () => {

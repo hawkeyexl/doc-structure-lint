@@ -776,6 +776,11 @@ export const rstParser: DocumentParser = {
   implemented: true,
   parse(content, filePath): DocumentTree {
     const src = indexLines(content);
+    // Order is load-bearing: `readMetadata` must run before `scanRange`.
+    // `scanRange` blanks consumed list lines in `src.text` in place so a later
+    // pass cannot re-read them, and `docinfoPosition` inside `readMetadata`
+    // reads those same lines to place the metadata span. Swapped, the docinfo
+    // field list is already blank and every metadata position collapses.
     const { frontmatter, position, bodyStart } = readMetadata(content, filePath, src);
     const blocks = scanRange(
       src,

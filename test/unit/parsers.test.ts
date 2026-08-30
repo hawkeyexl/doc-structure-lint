@@ -243,9 +243,16 @@ describe("parser registry", () => {
       "xml",
     ]);
     expect(formats.every((f) => f.extensions.length > 0)).toBe(true);
-    expect(formats.filter((f) => f.implemented).map((f) => f.name)).toContain(
-      "markdown",
-    );
+    // The whole set, not just markdown: `implemented` is what `moose-lint
+    // formats` prints and what turns an extension from "not supported yet"
+    // into a parse, so a regression that demotes one format is a silently
+    // narrower tool. Asserted exhaustively, demoting any of them fails here.
+    expect(
+      formats
+        .filter((f) => f.implemented)
+        .map((f) => f.name)
+        .sort(),
+    ).toEqual(["asciidoc", "html", "markdown", "mdx", "rst", "xml"]);
   });
 
   // Implemented parsers come first, so `moose-lint formats` reads as "here is
