@@ -205,6 +205,37 @@ try {
     fromConfig.stderr || fromConfig.stdout,
   );
 
+  // `paths:` naming a directory rather than a glob, with an `exclude:`. The CLI
+  // makes every config glob absolute (so a config means the same thing from any
+  // working directory), while a directory input walks with a cwd-relative
+  // pattern - so this is an absolute ignore filtering relative entries. If that
+  // ever stops matching, `exclude:` silently covers nothing: the drafts get
+  // linted, and because they are drafts the run starts failing on documents the
+  // repo deliberately excluded.
+  const excluded = join(dir, "excluded");
+  await mkdir(join(excluded, "docs", "drafts"), { recursive: true });
+  await writeFile(
+    join(excluded, "moose.config.yaml"),
+    ["lint:", '  paths: ["docs"]', '  exclude: ["**/drafts/**"]', ""].join("\n"),
+  );
+  await writeFile(
+    join(excluded, "docs", "page.md"),
+    "---\ntype: how-to\ntitle: Do it\n---\n\n## Overview\n\nWhy.\n\n## Step\n\nHow.\n\n## See also\n",
+  );
+  // Would fail the how-to template outright if the exclude stopped working.
+  await writeFile(
+    join(excluded, "docs", "drafts", "wip.md"),
+    "---\ntype: how-to\ntitle: Half written\n---\n\n## Overview\n",
+  );
+  const withExclude = await cli([], { cwd: excluded });
+  check(
+    "a directory in paths: honors exclude: (exit 0, drafts not linted)",
+    withExclude.code === 0 &&
+      withExclude.stdout.includes("1 passed") &&
+      !withExclude.stdout.includes("wip.md"),
+    withExclude.stderr || withExclude.stdout,
+  );
+
   const missing = await cli(["no-such-file.md", "-t", "tgdp:how-to:1.6"]);
   check(
     "an operational error exits 2",
