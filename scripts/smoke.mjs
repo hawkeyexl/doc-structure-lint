@@ -93,11 +93,22 @@ try {
 
   const untyped = join(dir, "untyped.md");
   await writeFile(untyped, "# No type here\n");
-  const skipped = await cli([untyped]);
+  const skipped = await cli([untyped, typed]);
   check(
-    "an untyped page is skipped, not failed (exit 0)",
+    "an untyped page beside a typed one is skipped, not failed (exit 0)",
     skipped.code === 0 && skipped.stdout.includes("skipped"),
     skipped.stderr || skipped.stdout,
+  );
+
+  // The other half of the same contract: a run that finds files and checks none
+  // of them must not exit 0, or a repo adopting the tool before backfilling
+  // `type:` keys gets a permanently green CI job over an unchecked docset.
+  const nothingChecked = await cli([untyped]);
+  check(
+    "a run that checks nothing fails loudly (exit 2)",
+    nothingChecked.code === 2 &&
+      nothingChecked.stderr.includes("Nothing was checked"),
+    nothingChecked.stdout || nothingChecked.stderr,
   );
 
   const mistyped = join(dir, "mistyped.md");
@@ -107,6 +118,28 @@ try {
     "an unknown type fails with a suggestion (exit 1)",
     unknown.code === 1 && unknown.stdout.includes("how-to"),
     unknown.stderr || unknown.stdout,
+  );
+
+  // Every implemented format, through the built package, against one built-in.
+  // The vitest suite proves parity from `src/`; this proves the parsers and
+  // their dependencies survive bundling.
+  const formatsList = await cli(["formats", "-f", "json"]);
+  let implementedExts = [];
+  try {
+    implementedExts = JSON.parse(formatsList.stdout)
+      .filter((f) => f.implemented)
+      .map((f) => f.extensions[0]);
+  } catch {
+    implementedExts = [];
+  }
+  const fixtures = implementedExts.map((ext) => `test/fixtures/formats/how-to${ext}`);
+  const everyFormat = await cli(fixtures);
+  check(
+    `one template lints all ${fixtures.length} implemented formats clean`,
+    fixtures.length > 0 &&
+      everyFormat.code === 0 &&
+      everyFormat.stdout.includes(`${fixtures.length} passed`),
+    everyFormat.stderr || everyFormat.stdout,
   );
 
   // SARIF is what a CI code-scanning upload consumes, so a malformed envelope

@@ -12,6 +12,7 @@
  * item's `children`, which is why `lists.items` can recurse.
  */
 
+import { MooseLintError } from "../types.js";
 import type {
   CodeNode,
   ContentNode,
@@ -132,3 +133,21 @@ export { checkCodeBlocks, checkCodeBlocksIn } from "./code-blocks.js";
 export { checkLists, checkListsIn } from "./lists.js";
 export { checkSequence, groupRuns } from "./sequence.js";
 export type { ContentRun } from "./sequence.js";
+
+/**
+ * Compile an author-supplied pattern, or say which one is broken.
+ *
+ * A pattern comes from a template, so a bad one is a broken template rather
+ * than a lint finding - and the raw `SyntaxError` names the regex but not the
+ * template, the section, or the file. Every caller must route the result
+ * through the same containment a template load failure gets, or one bad
+ * pattern takes the whole run down with it.
+ */
+export function compilePattern(pattern: string): RegExp {
+  try {
+    return new RegExp(pattern);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new MooseLintError(`Invalid pattern "${pattern}": ${reason}`);
+  }
+}

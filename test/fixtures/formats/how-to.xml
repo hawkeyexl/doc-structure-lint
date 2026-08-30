@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The DITA twin of how-to.md. Same page, section for section: an H1 title, then
+  Overview, Before you start, the task, and See also.
+
+  Two things it demonstrates that the Markdown twin cannot. Structure comes
+  from element nesting - the task is a <topic> nested inside the page's
+  <topic>, not a heading with a bigger number - and the doctype is declared as
+  a root-element attribute, which is where docmeta's XML extractor reads
+  metadata from, so `type: how-to` routes this page the same way front matter
+  routes the Markdown one.
+
+  The <note> in Overview is in no bucket of the vocabulary mapping, so it and
+  its <p> are skipped whole - the same rule that skips a Markdown blockquote.
+  Overview therefore holds exactly one paragraph, as its twin does.
+-->
+<topic id="rotate-an-api-key" type="how-to">
+  <title>Rotate an API key</title>
+  <body>
+    <section>
+      <title>Overview</title>
+      <p>Rotating a key replaces the old secret without interrupting live
+        traffic.</p>
+      <note type="tip">
+        <p>An admonition is not a paragraph, so this one is skipped whole.</p>
+      </note>
+    </section>
+    <section>
+      <title>Before you start</title>
+      <p>You need an account with the <codeph>admin</codeph> role.</p>
+    </section>
+  </body>
+  <topic id="rotate-the-key">
+    <title>Rotate the key</title>
+    <body>
+      <p>Issue the replacement, then retire the old one.</p>
+      <codeblock outputclass="language-bash">widget keys rotate --id abc123</codeblock>
+    </body>
+  </topic>
+  <topic id="see-also">
+    <title>See also</title>
+    <body>
+      <p>Read about key scopes and expiry.</p>
+    </body>
+  </topic>
+</topic>

@@ -108,6 +108,22 @@ An untyped page is `moose-meta`'s complaint, not this tool's — its OKF schema
 already requires `type`. Skipping is what lets you point `moose-lint` at a whole
 tree on day one, when three pages out of two hundred are typed.
 
+**Unless nothing at all was checked.** A run that finds files and checks none of
+them exits `2`, because a linter that looked at nothing is indistinguishable
+from a clean docset once it exits `0` — and a repo that adopts `moose-lint` in
+CI before backfilling `type:` keys would get a permanently green job over an
+unchecked tree.
+
+```text
+moose-lint: Nothing was checked: all 12 file(s) were skipped. Give a page a
+"type:" that a template serves, pass -t/--template <ref>, or set
+"lint.template" as a default. Run "moose-lint <paths> --explain" to see how
+each file resolved.
+```
+
+One checked file is enough to make the rest ordinary skips. `--explain` is
+exempt: showing why nothing routed is exactly its job.
+
 A page whose `type` **resolves to no template** is an **error**: exit `1`, with
 near misses named.
 
@@ -189,24 +205,38 @@ join the routing table, and win over the built-ins for the doctypes they claim.
 ## Input formats
 
 Structure comes from a real parse, behind a per-format registry: adding a format
-does not touch matching, rules, or reporting. A format that is registered but not
-yet implemented says so rather than being quietly parsed as Markdown.
+does not touch matching, rules, or reporting.
 
 ```bash
 moose-lint formats
 ```
 
-| format | extensions | status |
+| format | extensions | metadata read from |
 | --- | --- | --- |
-| Markdown | `.md`, `.markdown` | implemented |
-| MDX | `.mdx` | implemented |
-| AsciiDoc | `.adoc`, `.asciidoc` | planned |
-| reStructuredText | `.rst` | planned |
-| HTML | `.html`, `.htm` | planned |
-| XML | `.xml` | planned |
+| Markdown | `.md`, `.markdown` | fenced frontmatter |
+| MDX | `.mdx` | fenced frontmatter |
+| HTML | `.html`, `.htm` | `<meta>` and `<title>`, or fenced frontmatter |
+| AsciiDoc | `.adoc`, `.asciidoc` | the `:key: value` document header, or fenced frontmatter |
+| reStructuredText | `.rst` | the docinfo field list, or fenced frontmatter |
+| XML | `.dita` in directory walks; `.xml` and `.dita` when named | root-element attributes |
 
-Directory walks pick up implemented formats only. Naming an unimplemented file
-explicitly reports it as skipped, with the format named.
+One template checks all of them. The same `tgdp:how-to:1.6` lints a Markdown
+page, an AsciiDoc page, and a DITA topic, and reports **the same findings** —
+`test/integration/cross-format.test.ts` holds a fixture pair per format and
+asserts exactly that. If a template ever needed per-format special-casing, the
+content model would be wrong.
+
+Each parser maps its own vocabulary onto three generic content kinds —
+`paragraph`, `code`, `list`. Anything a doctype template cannot describe
+(blockquotes, tables, admonitions, figures) is **skipped rather than
+approximated**: counting a table as a list would make `lists: {max: 1}` fail
+documents that satisfy it.
+
+XML is the one format with no universal notion of a section, because that comes
+from the schema rather than the syntax. It ships declarative vocabulary mappings
+for **DITA** and **DocBook**, selected by scoring the document's root element,
+namespace, and element names; a bespoke schema is one more entry in the same
+table. See the header of [`src/parsers/xml.ts`](src/parsers/xml.ts).
 
 ## Template format
 

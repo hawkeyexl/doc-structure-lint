@@ -23,6 +23,7 @@
  * caller knows, so `resolveExtends` takes that resolver as an argument.
  */
 import { readFile } from "node:fs/promises";
+import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { dereference } from "@apidevtools/json-schema-ref-parser";
 import * as AjvNs from "ajv";
@@ -573,5 +574,75 @@ export async function resolveExtends(
   }
 
   const parent = await resolveExtends(await load(parentRef), load, [...chain, parentRef]);
+  return mergeTemplates(parent, template);
+}
+
+/* -------------------------------------------------------------------------- *
+ * Resolution relative to the declaring file
+ * -------------------------------------------------------------------------- */
+
+/**
+ * Re-base a ref against the file that declared it.
+ *
+ * A built-in id, a URL, and an absolute path all name themselves and are
+ * returned unchanged. A relative path means "beside the file I am written in",
+ * which is the one reading `loadTemplate` cannot produce on its own - it reads
+ * against the process working directory, so `extends: ./base.yaml` in
+ * `tpl/house.yaml` looked for `./base.yaml` at the cwd and found either nothing
+ * or, worse, an unrelated file of that name.
+ */
+export function refRelativeTo(baseRef: string, ref: string): string {
+  const { base, fragment } = splitFragment(ref);
+  if (classifyRef(base).kind !== "file" || isAbsolute(base)) return ref;
+
+  const { base: fromBase } = splitFragment(baseRef);
+  const from = classifyRef(fromBase).kind;
+
+  // A template fetched over HTTP names its neighbours the same way a local one
+  // does, and `./base.yaml` beside it is a URL, not a path. Resolved as a path
+  // it became a read of the process working directory - a local file quietly
+  // standing in for the remote one, or a "file not found" naming a path that
+  // appears nowhere in the template.
+  if (from === "url") {
+    const rebased = new URL(base, fromBase).href;
+    return fragment === null ? rebased : `${rebased}#${fragment}`;
+  }
+
+  if (from !== "file") return ref;
+
+  const rebased = resolvePath(dirname(fromBase), base);
+  return fragment === null ? rebased : `${rebased}#${fragment}`;
+}
+
+/**
+ * Load a template with its `extends` chain resolved, re-basing each relative
+ * ref against the file that declared it.
+ *
+ * This is what a caller should use. `resolveExtends` stays exported for callers
+ * that supply their own resolver, but its default is the cwd-relative
+ * `loadTemplate`, and reaching that default silently is the bug this exists to
+ * avoid - `.then(resolveExtends)` passes one argument, so the default is
+ * exactly what you get.
+ */
+export async function loadResolvedTemplate(
+  ref: string,
+  options: LoadTemplateOptions = {},
+  chain: string[] = [],
+): Promise<Template> {
+  const template = await loadTemplate(ref, options);
+  const parentRef = template.extends;
+  if (parentRef === undefined) return template;
+
+  const absolute = refRelativeTo(ref, parentRef);
+  if (chain.includes(absolute)) {
+    throw new MooseLintError(
+      `Template "extends" cycle: ${[...chain, absolute].join(" -> ")}.`,
+    );
+  }
+
+  const parent = await loadResolvedTemplate(absolute, options, [
+    ...chain,
+    absolute,
+  ]);
   return mergeTemplates(parent, template);
 }

@@ -180,6 +180,17 @@ function refFromFrontmatter(
 export interface ResolveParams {
   /** Path used for override glob matching. */
   filePath: string;
+  /**
+   * Absolute path of the same file, matched as a fallback.
+   *
+   * `overrides[].files` globs are written relative to the config file, while
+   * `filePath` is relative to the working directory. Those agree only when the
+   * tool is run from the config's own directory; anywhere else the glob matched
+   * nothing, the page fell through to its own `type`, and the run exited 0 with
+   * the repo's policy silently unapplied. The CLI now rebases the globs to
+   * absolute, so matching the absolute path too is what makes them land.
+   */
+  absolutePath?: string;
   /** The page's frontmatter, or null when it carries none. */
   frontmatter: Record<string, unknown> | null;
   /** `--template`: applies to every file in the run. */
@@ -224,7 +235,11 @@ export function resolveTemplateRef(params: ResolveParams): Resolution {
   });
 
   for (const override of params.overrides ?? []) {
-    if (matchesGlob(override.files, params.filePath)) {
+    if (
+      matchesGlob(override.files, params.filePath) ||
+      (params.absolutePath !== undefined &&
+        matchesGlob(override.files, params.absolutePath))
+    ) {
       steps.push({
         stage: "config-override",
         ref: override.template,

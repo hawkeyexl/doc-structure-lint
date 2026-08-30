@@ -19,7 +19,9 @@ import pkg from "../package.json" with { type: "json" };
 import { MooseLintError } from "./types.js";
 import { runLint } from "./commands/lint.js";
 import { runTemplates } from "./commands/templates.js";
-import { loadConfig } from "./core/config.js";
+import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
+import { loadConfig, type LintConfig } from "./core/config.js";
+import { refRelativeTo } from "./core/template-registry.js";
 import { runFormats } from "./commands/formats.js";
 import {
   render,
@@ -75,6 +77,63 @@ function listFormat(value: unknown): ListFormat {
     );
   }
   return format as ListFormat;
+}
+
+/**
+ * Re-base everything a config declares against the config file's own directory.
+ *
+ * `loadConfig` returns the file's `path` precisely so this can happen, and
+ * discarding it made the same config mean different things depending on where
+ * the tool was invoked from. Running from a subdirectory turned `templates:`
+ * into "file not found" and `paths:` into "nothing to lint" - and turned
+ * `overrides:` into nothing at all, silently: the glob stopped matching, every
+ * page fell through to its own `type`, and the run exited 0 having applied none
+ * of the repo's policy.
+ *
+ * Refs go through `refRelativeTo`, which leaves built-in ids, URLs, and
+ * absolute paths alone. Globs become absolute, which is what `runLint` matches
+ * them against.
+ */
+function rebaseConfig(
+  found: { config: LintConfig; path: string } | null,
+): LintConfig {
+  if (!found) return {};
+  const dir = dirname(resolvePath(found.path));
+  const config = found.config;
+
+  const ref = (value: string): string => refRelativeTo(found.path, value);
+  // Every non-absolute glob is relative to the config, `**/*.md` included.
+  // Exempting a leading `**` left the original bug half-open: from a
+  // subdirectory that pattern expanded against the working directory, so a run
+  // checked a subset of the configured docset and still exited 0.
+  const glob = (value: string): string =>
+    isAbsolute(value) ? value : resolvePath(dir, value).replace(/\\/g, "/");
+
+  return {
+    ...config,
+    ...(config.paths ? { paths: config.paths.map(glob) } : {}),
+    ...(config.exclude ? { exclude: config.exclude.map(glob) } : {}),
+    ...(config.templates ? { templates: config.templates.map(ref) } : {}),
+    ...(config.template ? { template: ref(config.template) } : {}),
+    ...(config.types
+      ? {
+          types: Object.fromEntries(
+            Object.entries(config.types).map(([type, value]) => [
+              type,
+              ref(value),
+            ]),
+          ),
+        }
+      : {}),
+    ...(config.overrides
+      ? {
+          overrides: config.overrides.map((o) => ({
+            files: glob(o.files),
+            template: ref(o.template),
+          })),
+        }
+      : {}),
+  };
 }
 
 export function buildProgram(): Command {
@@ -155,7 +214,7 @@ export function buildProgram(): Command {
         // `runLint` stays a pure function of the options it is handed and a
         // library caller is never surprised by a file on disk.
         const found = await loadConfig(options.config);
-        const config = found?.config ?? {};
+        const config = rebaseConfig(found);
 
         const run = await runLint({
           // Positional paths win; `paths:` is the fallback that lets CI run a
@@ -190,12 +249,21 @@ export function buildProgram(): Command {
   program
     .command("templates")
     .description("List the templates that can be applied, and the types they serve")
-    .option("--templates <path>", "also list the templates in this file")
+    .option("--templates <path...>", "also list the templates in these files")
+    .option("-c, --config <path>", "path to moose.config.yaml")
     .option("-f, --format <format>", "output: pretty | json", "pretty")
     .action(async (options, command: Command) => {
       try {
         const format = listFormat(options.format);
-        const info = await runTemplates({ templates: options.templates });
+        // The listing answers "what could route a page?", so it has to see the
+        // same template files a lint would.
+        const found = await loadConfig(options.config);
+        const info = await runTemplates({
+          // Rebased for the same reason the lint path is: this command answers
+          // "what could route a page?", so it must resolve the config's
+          // template paths exactly as a lint would.
+          templates: options.templates ?? rebaseConfig(found).templates,
+        });
         const color = resolveColor(command.parent ?? command);
         process.stdout.write(`${renderTemplates(info, format, { color })}\n`);
       } catch (err) {

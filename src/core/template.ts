@@ -3,6 +3,7 @@
  * authority that user input is validated against; this is the shape the rest of
  * the code reads once that validation has passed.
  */
+import { compilePattern } from "../rules/index.js";
 import type {
   CodeBlocksRule,
   HeadingRule,
@@ -79,7 +80,7 @@ export function headingMatches(title: string, rule: TemplateSection): boolean {
   if (isSlot(rule)) return true;
   if (rule.heading?.const !== undefined) return title === rule.heading.const;
   if (rule.heading?.pattern !== undefined) {
-    return new RegExp(rule.heading.pattern).test(title);
+    return compilePattern(rule.heading.pattern).test(title);
   }
   return true;
 }
