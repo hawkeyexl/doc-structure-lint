@@ -192,12 +192,19 @@ export function renderExplain(run: LintRun, opts: ReportOptions = {}): string {
 
     const cause = result.resolution?.cause;
     if (cause === "unknown-type") {
-      const type = result.resolution?.unknownType;
+      const type = result.resolution?.unknownType ?? "(none recorded)";
       const near = result.resolution?.suggestions ?? [];
-      lines.push(
-        `    ${c.red("✗")} no template serves type "${type}"` +
-          (near.length ? `; did you mean ${near.join(", ")}?` : ""),
-      );
+      const known = result.resolution?.knownTypes ?? [];
+      // The same fallback the pretty reporter gives. Without it a typo with no
+      // near miss - which is most of them, since a near miss needs the typo to
+      // be close - printed the failure and nothing to act on, while the plain
+      // lint output for that page listed every doctype available.
+      const hint = near.length
+        ? `; did you mean ${near.join(", ")}?`
+        : known.length
+          ? `; known doctypes: ${known.join(", ")}`
+          : "";
+      lines.push(`    ${c.red("✗")} no template serves type "${type}"${hint}`);
     } else if (cause === "no-type") {
       lines.push(`    ${c.dim("skipped: the page declares no type")}`);
     }

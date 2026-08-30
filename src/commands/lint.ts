@@ -203,14 +203,20 @@ function unknownTypeFinding(
   position: Position,
 ): Finding {
   const suggestions = resolution.suggestions ?? [];
+  const known = resolution.knownTypes ?? knownTypes(typeIndex);
   const hint = suggestions.length
     ? ` Did you mean ${suggestions.map((s) => `"${s}"`).join(", ")}?`
-    : ` Known doctypes: ${knownTypes(typeIndex).join(", ") || "(none)"}.`;
+    : ` Known doctypes: ${known.join(", ") || "(none)"}.`;
+  // `unknownType` is set whenever the cause is `unknown-type`, but the type
+  // says `string | undefined` and only the resolver enforces the pairing. The
+  // fallback keeps a future break from printing `type "undefined"`, which
+  // would send the reader looking for a doctype they never wrote.
+  const declared = resolution.unknownType ?? "(none recorded)";
   return {
     type: "unknown_type",
     heading: null,
     message:
-      `No template serves type "${resolution.unknownType}".${hint} ` +
+      `No template serves type "${declared}".${hint} ` +
       `Declare it on a template with "types:", then pass that file with --templates.`,
     position,
     severity: "error",
@@ -333,6 +339,24 @@ async function lintOne(
     // One unloadable template must not abort a run over a whole tree; it is
     // reported against the pages that route to it.
     return brokenTemplate(err);
+  }
+
+  // `--explain` stops here, having promised to "lint nothing".
+  //
+  // The line is drawn after loading rather than before it, because loading is
+  // part of the answer the flag exists to give: "which template, and why" is
+  // not answered by naming a ref that does not resolve, and a broken
+  // `--templates` path is exactly the surprise someone runs `--explain` to
+  // find. Loading is also cheap in the way validation is not - templates are
+  // cached, so a tree of one doctype loads once, while `validateDocument` runs
+  // per file and its findings are then discarded unrendered.
+  if (ctx.explain) {
+    return withResolution({
+      file: label,
+      success: true,
+      findings: [],
+      template: resolution.ref,
+    });
   }
 
   let findings: Finding[];

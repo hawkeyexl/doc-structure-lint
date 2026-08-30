@@ -115,8 +115,13 @@ try {
   await writeFile(mistyped, "---\ntype: how-two\n---\n\n# Typo\n");
   const unknown = await cli([mistyped]);
   check(
+    // "how-to" alone matched too loosely: it appears in the known-doctypes
+    // list, in template ids, and in any number of future outputs, so the check
+    // would have passed on a run that suggested nothing at all.
     "an unknown type fails with a suggestion (exit 1)",
-    unknown.code === 1 && unknown.stdout.includes("how-to"),
+    unknown.code === 1 &&
+      unknown.stdout.includes("Did you mean") &&
+      unknown.stdout.includes('"how-to"'),
     unknown.stderr || unknown.stdout,
   );
 

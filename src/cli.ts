@@ -175,7 +175,7 @@ export function buildProgram(): Command {
     .option("-c, --config <path>", "path to moose.config.yaml")
     .option(
       "--explain",
-      "print how each file's template was chosen, and lint nothing",
+      "print how each file's template was chosen, and lint nothing (always exits 0)",
     )
     .option("--as <format>", "force an input format (e.g. markdown, mdx)")
     .option(

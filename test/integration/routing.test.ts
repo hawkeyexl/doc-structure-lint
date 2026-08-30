@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runLint } from "../../src/commands/lint.js";
+import { render } from "../../src/reporters/index.js";
 
 let dir: string;
 
@@ -218,6 +219,49 @@ describe("--explain", () => {
     await file("guide.md", typed("how-to"));
     const run = await runLint({ inputs: [dir], cwd: dir });
     expect(run.results[0]!.resolution).toBeUndefined();
+  });
+
+  // The flag says it lints nothing, and it used to validate every document
+  // anyway and discard the findings - unrendered work that scaled with the
+  // docset. This page is missing sections the how-to template requires, so it
+  // fails an ordinary run; under `--explain` it must report none of that.
+  it("does not validate the document", async () => {
+    await file("guide.md", "---\ntype: how-to\n---\n\n# A\n\n## Nope\n");
+
+    const linted = await runLint({ inputs: [dir], cwd: dir });
+    expect(linted.results[0]!.findings.length).toBeGreaterThan(0);
+
+    const explained = await runLint({ inputs: [dir], explain: true, cwd: dir });
+    expect(explained.results[0]!.findings).toEqual([]);
+    expect(explained.results[0]!.success).toBe(true);
+    expect(explained.results[0]!.template).toBe("tgdp:how-to:1.6");
+  });
+
+  // A typo with no near miss - which is most of them, since a near miss needs
+  // the typo to be close - printed the failure and nothing to act on, while an
+  // ordinary lint of the same page listed every doctype available.
+  it("offers the known doctypes when no near miss is close enough", async () => {
+    await file("guide.md", "---\ntype: zzzzzzzz\n---\n\n# A\n");
+    const run = await runLint({ inputs: [dir], explain: true, cwd: dir });
+    const resolution = run.results[0]!.resolution!;
+
+    expect(resolution.cause).toBe("unknown-type");
+    expect(resolution.suggestions ?? []).toEqual([]);
+    expect(resolution.knownTypes).toContain("how-to");
+
+    const out = render(run, "explain", { color: false });
+    expect(out).toContain("known doctypes:");
+    expect(out).toContain("how-to");
+  });
+
+  // The other side of that line. Loading is part of "which template, and why",
+  // so a ref that does not resolve is exactly what someone runs `--explain` to
+  // find - skipping the load to save the work would have hidden it.
+  it("still reports a template that cannot be loaded", async () => {
+    await file("guide.md", `---\n$template: ./missing.yaml#nope\n---\n\n# A\n`);
+    const run = await runLint({ inputs: [dir], explain: true, cwd: dir });
+
+    expect(run.results[0]!.findings[0]!.type).toBe("template_error");
   });
 });
 

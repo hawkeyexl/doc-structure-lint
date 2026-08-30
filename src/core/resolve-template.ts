@@ -56,6 +56,14 @@ export interface Resolution {
   unknownType?: string;
   /** Near-miss doctypes, for an unknown-type message. */
   suggestions?: string[];
+  /**
+   * Every doctype something serves, for an unknown-type message with no near
+   * miss to offer. Carried on the resolution rather than looked up by each
+   * reporter, because the type index does not reach them - which is how the
+   * pretty reporter came to print the list and `--explain` came to print
+   * nothing, for the same page.
+   */
+  knownTypes?: string[];
   /** The full chain, for `--explain`. */
   steps: ResolutionStep[];
 }
@@ -281,6 +289,7 @@ export function resolveTemplateRef(params: ResolveParams): Resolution {
       cause: "unknown-type",
       unknownType: type,
       suggestions: suggestTypes(type, typeIndex.keys()),
+      knownTypes: knownTypes(typeIndex),
       steps,
     };
   }
