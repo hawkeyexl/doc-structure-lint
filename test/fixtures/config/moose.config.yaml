@@ -1,0 +1,31 @@
+# A shared moose config, as a repo that has adopted the whole family writes it.
+#
+# The root is a mapping of tool name to that tool's settings. moose-lint reads
+# `lint:` and nothing else, so the sibling sections below cost it nothing - it
+# neither reads nor validates them, and needs no registry of known tools to
+# know that.
+
+docevals:
+  provider:
+    default: anthropic
+  suites:
+    release:
+      target-pass-rate: 0.9
+
+docmeta:
+  schemas:
+    - okf
+
+lint:
+  paths:
+    - "docs/**/*.md"
+  exclude:
+    - "**/drafts/**"
+  templates:
+    - "./templates.yaml"
+  template: tgdp:how-to:1.6
+  types:
+    api-operation: ./templates.yaml#api-operation
+  overrides:
+    - files: "docs/api/**"
+      template: tgdp:reference:1.6

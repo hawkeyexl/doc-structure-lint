@@ -130,6 +130,17 @@ export interface DocumentParser {
   label: string;
   /** Lowercase file extensions this parser handles, incl. dot (e.g. ".md"). */
   extensions: string[];
+  /**
+   * Extensions safe to collect from a directory walk. Defaults to
+   * `extensions`.
+   *
+   * The two differ when an extension is a generic container rather than a
+   * documentation format. `.xml` is the case: this parser can read a DocBook
+   * or DITA document named explicitly, but a docs tree also contains
+   * `pom.xml`, `sitemap.xml`, and `.csproj`, and sweeping those in turns a
+   * clean run into a failure about files the user never asked to lint.
+   */
+  walkExtensions?: string[];
   /** Whether this parser is wired up (false for roadmap stubs). */
   implemented: boolean;
   /** Parse raw file content into the generic tree. */

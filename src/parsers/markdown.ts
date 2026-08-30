@@ -12,11 +12,12 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdx from "remark-mdx";
-import { extractFrontmatter, locateFrontmatter } from "docmeta";
-import type { DocumentParser, DocumentTree, Position } from "../types.js";
+import { extractFrontmatter } from "docmeta";
+import type { DocumentParser, DocumentTree } from "../types.js";
 import { MooseLintError } from "../types.js";
 import { documentEnd, toBlocks } from "./mdast.js";
 import { sectionize } from "./sectionize.js";
+import { fencedPosition as frontmatterPosition, withMetadataTitle as withFrontmatterTitle } from "./metadata.js";
 
 const markdownProcessor = unified()
   .use(remarkParse)
@@ -28,28 +29,6 @@ const mdxProcessor = unified()
   .use(remarkGfm)
   .use(remarkFrontmatter, ["yaml", "toml"])
   .use(remarkMdx);
-
-/**
- * Frontmatter span from docmeta's locator, which reports character offsets
- * against the original content. Line 1 is where a fenced block always starts,
- * and the end line is recovered by counting newlines - cheaper than a second
- * parse and exact, because the locator's offsets are byte-for-byte.
- */
-function frontmatterPosition(content: string): Position | null {
-  const loc = locateFrontmatter(content);
-  if (!loc) return null;
-  const before = content.slice(0, loc.openStart);
-  const startLine = before.split("\n").length;
-  const inner = content.slice(loc.openStart, loc.closeEnd);
-  return {
-    start: { line: startLine, column: 1, offset: loc.openStart },
-    end: {
-      line: startLine + inner.split("\n").length - 1,
-      column: 1,
-      offset: loc.closeEnd,
-    },
-  };
-}
 
 /**
  * Only `parse` is used, and unified's `Processor` generics differ between the
@@ -80,12 +59,18 @@ function parseWith(
   const meta = extractFrontmatter(content, format);
   const tree = root as Parameters<typeof toBlocks>[0];
 
+  const frontmatter = meta.present ? meta.data : null;
+  const metaPosition = frontmatterPosition(content);
+
   return {
     format,
     filePath,
-    frontmatter: meta.present ? meta.data : null,
-    frontmatterPosition: frontmatterPosition(content),
-    sections: sectionize(toBlocks(tree), documentEnd(tree)),
+    frontmatter,
+    frontmatterPosition: metaPosition,
+    sections: sectionize(
+      withFrontmatterTitle(toBlocks(tree), frontmatter, metaPosition),
+      documentEnd(tree),
+    ),
   };
 }
 

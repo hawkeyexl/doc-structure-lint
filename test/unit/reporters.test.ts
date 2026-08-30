@@ -5,6 +5,7 @@ import {
   renderJson,
   renderPretty,
 } from "../../src/reporters/index.js";
+import { renderSarif } from "../../src/reporters/sarif.js";
 import type { LintRun } from "../../src/commands/lint.js";
 import type { Finding } from "../../src/types.js";
 
@@ -203,6 +204,31 @@ describe("pretty reporter", () => {
 });
 
 describe("github reporter", () => {
+  /**
+   * One finding, so an escaping assertion is about the annotation itself and
+   * not about which of several lines it landed on. Anything not overridden
+   * matches the shared fixture.
+   */
+  function annotationFor(over: { file?: string; message?: string }): string {
+    const single: LintRun = {
+      results: [
+        {
+          file: over.file ?? "bad.md",
+          success: false,
+          findings: [
+            finding({
+              heading: null,
+              message: over.message ?? "Required section is missing",
+            }),
+          ],
+          template: "how-to",
+        },
+      ],
+      summary: { checked: 1, passed: 0, failed: 1, skipped: 0 },
+    };
+    return renderGithub(single);
+  }
+
   it("emits one ::error annotation per finding, with file, line and col", () => {
     const out = renderGithub(run);
     expect(out.split("\n")).toEqual([
@@ -217,23 +243,64 @@ describe("github reporter", () => {
     expect(renderGithub(cleanRun)).toBe("");
   });
 
-  it("collapses a multi-line message onto the single annotation line", () => {
-    const wrapped: LintRun = {
-      results: [
-        {
-          file: "bad.md",
-          success: false,
-          findings: [
-            finding({ heading: null, message: "first line\nsecond line" }),
-          ],
-          template: "how-to",
-        },
-      ],
-      summary: { checked: 1, passed: 0, failed: 1, skipped: 0 },
-    };
-    const out = renderGithub(wrapped);
+  // Every absolute path on Windows carries a drive-letter colon. Unescaped, it
+  // closes the `::`-terminated property list early, and GitHub drops the
+  // annotation instead of attaching it to the file - so the whole `-f github`
+  // output is silently useless on a Windows runner.
+  it("escapes a colon in the file property so a Windows path still parses", () => {
+    const out = annotationFor({ file: "C:\\docs\\a.md" });
+    expect(out).toBe(
+      "::error file=C%3A\\docs\\a.md,line=3,col=1::[missing_section] Required section is missing",
+    );
+  });
+
+  // Properties are comma-separated, so a comma inside one splits the path in
+  // half and leaves the remainder parsed as a nameless second property.
+  it("escapes a comma in the file property so the path stays one property", () => {
+    const out = annotationFor({ file: "docs/a,b.md" });
+    expect(out).toContain("file=docs/a%2Cb.md,line=3,col=1::");
+  });
+
+  // A literal `%` is the escape character: left alone it makes GitHub read the
+  // next two characters as a hex code and swallow them.
+  it("escapes a percent in the message as %25", () => {
+    const out = annotationFor({ message: "coverage is 50% of the file" });
+    expect(out).toContain("coverage is 50%25 of the file");
+  });
+
+  // Percent has to be escaped before the line breaks are. The other order
+  // rewrites the `%` of a `%0A` this code just introduced, and the annotation
+  // shows a literal `%0A` where the break should be.
+  it("escapes a percent before a newline, so the newline escape survives", () => {
+    const out = annotationFor({ message: "50%\nof files" });
+    expect(out).toContain("50%25%0Aof files");
+    expect(out).not.toContain("%250A");
+    expect(out).not.toContain("%2525");
+  });
+
+  // A raw newline ends the workflow command, so the rest of the message is
+  // printed as loose log output and never reaches the annotation.
+  it("escapes a newline as %0A and keeps the annotation on one line", () => {
+    const out = annotationFor({ message: "first line\nsecond line" });
     expect(out.split("\n")).toHaveLength(1);
-    expect(out).toContain("first line second line");
+    expect(out).toContain("first line%0Asecond line");
+  });
+
+  // A bare `\r` is a line break too, and a runner's log treats it as one. The
+  // collapse this replaced matched `\r?\n`, which let a lone carriage return
+  // through untouched.
+  it("escapes a bare carriage return as %0D and keeps the annotation on one line", () => {
+    const out = annotationFor({ message: "first line\rsecond line" });
+    expect(out).toContain("first line%0Dsecond line");
+    expect(out).not.toContain("\r");
+    expect(out.split(/\r?\n/)).toHaveLength(1);
+  });
+
+  // CRLF has to survive as both halves, in order, or a Windows-authored
+  // message loses a character on the way to the annotation.
+  it("escapes a CRLF pair as %0D%0A", () => {
+    const out = annotationFor({ message: "first line\r\nsecond line" });
+    expect(out).toContain("first line%0D%0Asecond line");
   });
 });
 
@@ -244,5 +311,34 @@ describe("render", () => {
     expect(render(run, "pretty", { color: false })).toBe(
       renderPretty(run, { color: false }),
     );
+  });
+
+  // `render` is the entry point a library caller reaches for, and SARIF is the
+  // one reporter whose entire output is paths. Without a way to pass `root`
+  // through, such a caller was pinned to the process cwd and every URI in the
+  // document was silently relative to the wrong directory.
+  it("forwards root to the sarif reporter", () => {
+    // An absolute path on purpose: `root` is only consulted for one, so a run
+    // of relative paths would pass this test without the option travelling.
+    const root = process.platform === "win32" ? "C:/repo" : "/repo";
+    const absolute: LintRun = {
+      ...run,
+      results: [
+        {
+          file: `${root}/docs/a.md`,
+          success: false,
+          findings: [finding()],
+          template: "how-to",
+        },
+      ],
+    };
+
+    expect(render(absolute, "sarif", { root })).toBe(
+      renderSarif(absolute, { root }),
+    );
+    // Proof it travelled: under the run's own root the URI is repo-relative,
+    // while under the process cwd the same file is outside the root and falls
+    // back to an absolute `file:` URI.
+    expect(render(absolute, "sarif", { root })).not.toBe(renderSarif(absolute));
   });
 });

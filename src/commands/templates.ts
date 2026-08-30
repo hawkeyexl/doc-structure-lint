@@ -1,7 +1,7 @@
 /**
  * `templates` command core. Reports the templates a run could resolve: the
- * built-ins, plus the named templates in `--templates <path>` when one is
- * given, with the doctypes each serves.
+ * built-ins, plus the named templates in any files given by `--templates` or by
+ * `lint.templates` in the config, with the doctypes each serves.
  *
  * The `types` column is the part worth printing. It is what frontmatter
  * routing will match a page against, so seeing it is how someone works out
@@ -37,8 +37,8 @@ export interface TemplatesInfo {
 }
 
 export interface TemplatesOptions {
-  /** `--templates`: a template file whose entries join the built-ins. */
-  templates?: string;
+  /** Template files whose entries join the built-ins. */
+  templates?: string | string[];
 }
 
 export async function runTemplates(
@@ -51,14 +51,24 @@ export async function runTemplates(
     source: BUILTIN_SOURCE,
   }));
 
-  if (opts.templates != null) {
-    const file = await loadTemplateFile(opts.templates);
+  // Listed after the built-ins, in the order supplied - the same order
+  // `buildTypeIndex` applies them in, so a later entry claiming the same
+  // doctype is the one that would win.
+  const paths =
+    opts.templates == null
+      ? []
+      : Array.isArray(opts.templates)
+        ? opts.templates
+        : [opts.templates];
+
+  for (const path of paths) {
+    const file = await loadTemplateFile(path);
     for (const [id, template] of Object.entries(file.templates ?? {})) {
       templates.push({
         id,
         title: "",
         types: template.types ?? [],
-        source: opts.templates,
+        source: path,
       });
     }
   }

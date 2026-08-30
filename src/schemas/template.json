@@ -53,11 +53,11 @@
       }
     },
     "sections": {
-      "description": "Section rules keyed by name, in document order. Each key describes one heading a level below its parent.",
+      "description": "Section rules keyed by name, in document order. Each key describes one heading a level below its parent. A name may not consist only of digits: JavaScript enumerates integer-like object keys first, in ascending numeric order, so an all-digit name would silently reorder the rules relative to how the template declares them - and declared order is most of what a section rule asserts. Prefix such a name (`v2024`, `step-1`).",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
-        "^[A-Za-z0-9-_ ]+$": { "$ref": "#/definitions/section" }
+        "^(?![0-9]+$)[A-Za-z0-9-_ ]+$": { "$ref": "#/definitions/section" }
       }
     },
     "section": {

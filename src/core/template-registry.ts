@@ -23,6 +23,7 @@
  * caller knows, so `resolveExtends` takes that resolver as an argument.
  */
 import { readFile } from "node:fs/promises";
+import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { dereference } from "@apidevtools/json-schema-ref-parser";
 import * as AjvNs from "ajv";
@@ -37,6 +38,28 @@ import tgdpManifest from "../templates/tgdp/manifest.json" with { type: "json" }
 // constructor.
 type AjvCtor = typeof import("ajv").default;
 const Ajv = AjvNs.default as unknown as AjvCtor;
+
+/**
+ * Options for both `dereference` calls, named so the two cannot drift apart.
+ *
+ * `resolve.external: false` confines `$ref` to the file it is written in. A
+ * template file is untrusted input - `loadTemplateFile` will fetch one over
+ * `http(s)`, and a local one is only as trustworthy as whoever wrote it, who is
+ * not necessarily whoever runs the lint. The dereferencer resolves a `$ref` by
+ * reading the file or making the request it names, from the linting host and
+ * with its privileges. Left on, `$ref: /etc/passwd` or
+ * `$ref: http://169.254.169.254/latest/meta-data/` in a template turned a lint
+ * run into an arbitrary read, and a remote template into one that reports back
+ * what it found.
+ *
+ * Nothing in the template DSL wants it. `$ref` is documented as how one file
+ * shares a section rule between its own templates, and reuse *across* files is
+ * what `extends` is for - which goes through `loadTemplate`, is re-based against
+ * the declaring file, and is cycle-checked. Same-document (`#/...`) pointers are
+ * untouched; an external one is left standing instead, and the schema then
+ * rejects it as an unexpected `$ref` key rather than following it.
+ */
+const DEREFERENCE_OPTIONS = { resolve: { external: false } };
 
 export interface BuiltinInfo {
   id: string;
@@ -134,6 +157,7 @@ async function loadBuiltin(id: string): Promise<Template> {
   const file = validateTemplateFile(
     await dereference<Record<string, unknown>>(
       parseYaml(raw) as Record<string, unknown>,
+      DEREFERENCE_OPTIONS,
     ),
     entry.file,
   );
@@ -405,7 +429,7 @@ async function dereferenceTemplates(
   source: string,
 ): Promise<Record<string, unknown>> {
   try {
-    return await dereference<Record<string, unknown>>(data);
+    return await dereference<Record<string, unknown>>(data, DEREFERENCE_OPTIONS);
   } catch (err) {
     throw new MooseLintError(`${source}: could not resolve a "$ref": ${(err as Error).message}`);
   }
@@ -476,13 +500,20 @@ export async function loadTemplate(
   const names = Object.keys(templates);
 
   if (fragment !== null) {
-    const named = templates[fragment];
-    if (!named) {
+    // An own-property check, not a truthiness test on the lookup. `templates`
+    // is a plain object parsed from YAML, so `#constructor` and `#toString`
+    // name members it inherits from `Object.prototype`. Those are truthy, so
+    // such a fragment sailed past this guard and a function came back as a
+    // template - one with no `sections`, which checks the document against
+    // nothing. The bad fragment therefore produced silence rather than an
+    // error: the page was reported as passing, not as naming a template that
+    // does not exist.
+    if (!Object.hasOwn(templates, fragment)) {
       throw new MooseLintError(
         `${base} has no template named "${fragment}". Available: ${names.join(", ") || "(none)"}.`,
       );
     }
-    return named;
+    return templates[fragment]!;
   }
 
   if (names.length === 1) return templates[names[0]!]!;
@@ -573,5 +604,75 @@ export async function resolveExtends(
   }
 
   const parent = await resolveExtends(await load(parentRef), load, [...chain, parentRef]);
+  return mergeTemplates(parent, template);
+}
+
+/* -------------------------------------------------------------------------- *
+ * Resolution relative to the declaring file
+ * -------------------------------------------------------------------------- */
+
+/**
+ * Re-base a ref against the file that declared it.
+ *
+ * A built-in id, a URL, and an absolute path all name themselves and are
+ * returned unchanged. A relative path means "beside the file I am written in",
+ * which is the one reading `loadTemplate` cannot produce on its own - it reads
+ * against the process working directory, so `extends: ./base.yaml` in
+ * `tpl/house.yaml` looked for `./base.yaml` at the cwd and found either nothing
+ * or, worse, an unrelated file of that name.
+ */
+export function refRelativeTo(baseRef: string, ref: string): string {
+  const { base, fragment } = splitFragment(ref);
+  if (classifyRef(base).kind !== "file" || isAbsolute(base)) return ref;
+
+  const { base: fromBase } = splitFragment(baseRef);
+  const from = classifyRef(fromBase).kind;
+
+  // A template fetched over HTTP names its neighbours the same way a local one
+  // does, and `./base.yaml` beside it is a URL, not a path. Resolved as a path
+  // it became a read of the process working directory - a local file quietly
+  // standing in for the remote one, or a "file not found" naming a path that
+  // appears nowhere in the template.
+  if (from === "url") {
+    const rebased = new URL(base, fromBase).href;
+    return fragment === null ? rebased : `${rebased}#${fragment}`;
+  }
+
+  if (from !== "file") return ref;
+
+  const rebased = resolvePath(dirname(fromBase), base);
+  return fragment === null ? rebased : `${rebased}#${fragment}`;
+}
+
+/**
+ * Load a template with its `extends` chain resolved, re-basing each relative
+ * ref against the file that declared it.
+ *
+ * This is what a caller should use. `resolveExtends` stays exported for callers
+ * that supply their own resolver, but its default is the cwd-relative
+ * `loadTemplate`, and reaching that default silently is the bug this exists to
+ * avoid - `.then(resolveExtends)` passes one argument, so the default is
+ * exactly what you get.
+ */
+export async function loadResolvedTemplate(
+  ref: string,
+  options: LoadTemplateOptions = {},
+  chain: string[] = [],
+): Promise<Template> {
+  const template = await loadTemplate(ref, options);
+  const parentRef = template.extends;
+  if (parentRef === undefined) return template;
+
+  const absolute = refRelativeTo(ref, parentRef);
+  if (chain.includes(absolute)) {
+    throw new MooseLintError(
+      `Template "extends" cycle: ${[...chain, absolute].join(" -> ")}.`,
+    );
+  }
+
+  const parent = await loadResolvedTemplate(absolute, options, [
+    ...chain,
+    absolute,
+  ]);
   return mergeTemplates(parent, template);
 }

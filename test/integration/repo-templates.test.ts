@@ -62,17 +62,33 @@ describe("the repository's own templates", () => {
     ]);
   });
 
-  it("handles a document with no H1 via the implicit lead section", () => {
+  // The headless sample is the shape Docusaurus, Hugo, and Starlight produce:
+  // the title lives in frontmatter and the body starts at `##`. Read literally
+  // it has no top-level section and every doctype template misaligns against it.
+  it("takes the H1 from frontmatter when the body has none", () => {
     const tree = markdownParser.parse(
       readFileSync("artifacts/sample_markdown_headless.md", "utf8"),
       "artifacts/sample_markdown_headless.md",
     );
-    expect(tree.sections[0]!.level).toBe(0);
-    expect(tree.sections[0]!.sections.map((s) => s.title)).toContain(
-      "Prerequisites",
-    );
-    // Frontmatter is still read when no heading precedes the content.
     expect(tree.frontmatter).toMatchObject({ title: "Sample" });
+
+    const root = tree.sections[0]!;
+    expect(root.level).toBe(1);
+    expect(root.title).toBe("Sample");
+    // Anchored on the frontmatter, which is where the title actually is.
+    expect(root.headingPosition?.start.line).toBe(1);
+    expect(root.sections.map((s) => s.title)).toContain("Prerequisites");
+  });
+
+  it("still uses the implicit lead section when there is no title anywhere", () => {
+    const tree = markdownParser.parse(
+      "Intro prose.\n\n## Prerequisites\n\nMore.\n",
+      "headless.md",
+    );
+    expect(tree.sections[0]!.level).toBe(0);
+    expect(tree.sections[0]!.sections.map((s) => s.title)).toEqual([
+      "Prerequisites",
+    ]);
   });
 
   // `templates.yaml` is the file the README teaches from, so its worked

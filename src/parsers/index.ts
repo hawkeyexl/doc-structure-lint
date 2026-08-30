@@ -6,22 +6,27 @@
  * everything downstream of `parse()` operates on the generic `DocumentTree`, so
  * adding a format is one file plus one line here - no change to matching,
  * rules, templates, or reporting.
+ *
+ * Every registered format is implemented today. `DocumentParser.implemented`
+ * stays because the roadmap-stub pattern is what kept the pre-rewrite
+ * `inferFileType` from quietly parsing an `.rst` file as Markdown: a format
+ * that is coming should be registered with `implemented: false` and a `parse`
+ * that throws a `MooseLintError` naming it, so `moose-lint formats` reports the
+ * gap and a file of that type is skipped by name rather than mis-parsed.
  */
 import type { DocumentParser } from "../types.js";
 import { markdownParser, mdxParser } from "./markdown.js";
-import {
-  asciidocParser,
-  htmlParser,
-  rstParser,
-  xmlParser,
-} from "./stub.js";
+import { htmlParser } from "./html.js";
+import { rstParser } from "./rst.js";
+import { xmlParser } from "./xml.js";
+import { asciidocParser } from "./asciidoc.js";
 
 export const PARSERS: DocumentParser[] = [
   markdownParser,
   mdxParser,
+  htmlParser,
   asciidocParser,
   rstParser,
-  htmlParser,
   xmlParser,
 ];
 
@@ -48,7 +53,9 @@ export function parserByName(name: string): DocumentParser | undefined {
 
 /** Extensions handled by implemented parsers. Used for directory walks. */
 export function supportedExtensions(): string[] {
-  return PARSERS.filter((p) => p.implemented).flatMap((p) => p.extensions);
+  return PARSERS.filter((p) => p.implemented).flatMap(
+    (p) => p.walkExtensions ?? p.extensions,
+  );
 }
 
 /** Every registered format, for `moose-lint formats`. */

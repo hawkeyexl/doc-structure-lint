@@ -92,9 +92,8 @@ Highest precedence first:
 | 4 | the page's `type` | what the page says it is |
 | 5 | a configured default | what to assume when a page says nothing |
 
-Steps 3 and 5 are policy the linter applies but that nothing writes yet:
-`moose.config.yaml` lands in a later release. Until then, routing is steps 1, 2,
-and 4.
+Steps 3 and 5 are repo policy, written in
+[`moose.config.yaml`](#configuration).
 
 ### A missing `type` and an unknown one are different
 
@@ -108,6 +107,22 @@ apart, it does not fail the run, and its neighbours are still checked.
 An untyped page is `moose-meta`'s complaint, not this tool's — its OKF schema
 already requires `type`. Skipping is what lets you point `moose-lint` at a whole
 tree on day one, when three pages out of two hundred are typed.
+
+**Unless nothing at all was checked.** A run that finds files and checks none of
+them exits `2`, because a linter that looked at nothing is indistinguishable
+from a clean docset once it exits `0` — and a repo that adopts `moose-lint` in
+CI before backfilling `type:` keys would get a permanently green job over an
+unchecked tree.
+
+```text
+moose-lint: Nothing was checked: all 12 file(s) were skipped. Give a page a
+"type:" that a template serves, pass -t/--template <ref>, or set
+"lint.template" as a default. Run "moose-lint <paths> --explain" to see how
+each file resolved.
+```
+
+One checked file is enough to make the rest ordinary skips. `--explain` is
+exempt: showing why nothing routed is exactly its job.
 
 A page whose `type` **resolves to no template** is an **error**: exit `1`, with
 near misses named.
@@ -169,10 +184,11 @@ configuration, not about the documents.
 
 ## Commands
 
-```
+```text
 moose-lint [paths...]   Lint, routing each page by its `type`. -t/--template <ref>,
-                        --templates <path>, --explain, --as <format>,
-                        --exclude <glob...>, -f/--format <pretty|json|github>, --no-color
+                        --templates <path...>, -c/--config <path>, --explain,
+                        --as <format>, --exclude <glob...>,
+                        -f/--format <pretty|json|github|sarif>, --no-color
 moose-lint templates    List resolvable templates and the doctypes they serve
 moose-lint formats      List input formats, implemented and planned
 ```
@@ -189,24 +205,38 @@ join the routing table, and win over the built-ins for the doctypes they claim.
 ## Input formats
 
 Structure comes from a real parse, behind a per-format registry: adding a format
-does not touch matching, rules, or reporting. A format that is registered but not
-yet implemented says so rather than being quietly parsed as Markdown.
+does not touch matching, rules, or reporting.
 
 ```bash
 moose-lint formats
 ```
 
-| format | extensions | status |
+| format | extensions | metadata read from |
 | --- | --- | --- |
-| Markdown | `.md`, `.markdown` | implemented |
-| MDX | `.mdx` | implemented |
-| AsciiDoc | `.adoc`, `.asciidoc` | planned |
-| reStructuredText | `.rst` | planned |
-| HTML | `.html`, `.htm` | planned |
-| XML | `.xml` | planned |
+| Markdown | `.md`, `.markdown` | fenced frontmatter |
+| MDX | `.mdx` | fenced frontmatter |
+| HTML | `.html`, `.htm` | `<meta>` and `<title>`, or fenced frontmatter |
+| AsciiDoc | `.adoc`, `.asciidoc` | the `:key: value` document header, or fenced frontmatter |
+| reStructuredText | `.rst` | the docinfo field list, or fenced frontmatter |
+| XML | `.dita` in directory walks; `.xml` and `.dita` when named | root-element attributes |
 
-Directory walks pick up implemented formats only. Naming an unimplemented file
-explicitly reports it as skipped, with the format named.
+One template checks all of them. The same `tgdp:how-to:1.6` lints a Markdown
+page, an AsciiDoc page, and a DITA topic, and reports **the same findings** —
+`test/integration/cross-format.test.ts` holds a fixture pair per format and
+asserts exactly that. If a template ever needed per-format special-casing, the
+content model would be wrong.
+
+Each parser maps its own vocabulary onto three generic content kinds —
+`paragraph`, `code`, `list`. Anything a doctype template cannot describe
+(blockquotes, tables, admonitions, figures) is **skipped rather than
+approximated**: counting a table as a list would make `lists: {max: 1}` fail
+documents that satisfy it.
+
+XML is the one format with no universal notion of a section, because that comes
+from the schema rather than the syntax. It ships declarative vocabulary mappings
+for **DITA** and **DocBook**, selected by scoring the document's root element,
+namespace, and element names; a bespoke schema is one more entry in the same
+table. See the header of [`src/parsers/xml.ts`](src/parsers/xml.ts).
 
 ## Template format
 
@@ -262,7 +292,7 @@ heading:
   const: Exact heading text # or:
   pattern: ^Regex against the heading$
 required: true # default true
-repeat: false # this rule may claim a run of sections, not just one
+repeat: false # default false; true claims a run of sections, not just one
 additionalSections: false # allow subsections this template does not describe
 sections: {} # nested section rules, in document order
 ```
@@ -365,6 +395,14 @@ $ moose-lint page.md --templates templates.yaml
 `Overview`, `Before you start`, and the repeating task sections are all still
 checked. Only `See also` became optional.
 
+### Templates are trusted input
+
+A template is executable configuration, at the same trust level as the linter
+itself or an ESLint config. `heading.pattern` and the `patterns:` under
+`paragraphs` are full JavaScript regular expressions, compiled and run as
+written. Review a template you did not write, including one `extends` fetches
+from a URL, the way you would any other executable configuration.
+
 ## Built-in doctype templates
 
 Seven templates ship with the tool, derived by hand from
@@ -400,30 +438,95 @@ mirrors, so `npm run check:tgdp-pin` asks GitLab whether upstream has moved past
 the pin and reports what moving it would involve. It is a report, not a gate:
 upstream moving does not make the pinned templates wrong, it makes them old.
 
-### Two things that will bite you
+### The H1, and pages that have none
 
-**The H1 is a rule.** Every built-in models upstream's H1 as its top-level
-section, so a page whose title lives only in frontmatter — body starting at
-`##` — does not match, and you get a cascade rather than one finding:
+Every built-in models upstream's H1 as its top-level section, because that is
+how the published templates are written. Docusaurus, Hugo, and Starlight all
+render the page title from frontmatter, so their pages legitimately start at
+`##` and have no H1 to match.
 
-```text
-✗ headless.md
-    6:1  missing_section  Overview: Missing section "Overview"
-    6:1  missing_section  Overview: Missing section "task"
-    6:1  missing_section  Overview: Missing section "See also"
-    10:1  unexpected_section  Install it: Unexpected section "Install it". Set additionalSections: true to allow sections the template does not describe.
-    14:1  unexpected_section  See also: Unexpected section "See also". Set additionalSections: true to allow sections the template does not describe.
+Those pages work. When a page carries a frontmatter `title` and its body has no
+H1, that title *is* the document's H1 — findings about it are anchored on the
+frontmatter, where the title actually lives:
 
-1 file checked, 0 passed, 1 failed, 0 skipped
+```markdown
+---
+type: how-to
+title: Install the widget
+---
+
+## Overview
 ```
 
-If your site renders the title from frontmatter and your bodies start at `##`,
-the built-ins are not for you as shipped. Write the doctype yourself, or
-`extends` a built-in and replace its top-level rule.
+```text
+✓ install.md
+
+1 file checked, 1 passed, 0 failed, 0 skipped
+```
+
+A page with neither an H1 nor a frontmatter `title` has no top-level section for
+a doctype template to match, and will report one. That is a page a reader would
+also struggle to name.
+
+### One thing that will bite you
 
 **`tgdp:how-to:1.6` requires `See also`.** Upstream includes it unconditionally
-and never marks it optional, so the derived template requires it. If you
-disagree, [inherit and relax it](#reuse) — one file, four lines.
+and never marks it optional, so the derived template requires it — and plenty of
+real how-tos have none. Rather than substitute our judgment for TGDP's, relaxing
+it is the worked [`extends` example](#reuse): one file, four lines.
+
+## Configuration
+
+Optional. A repo whose pages all declare their `type` needs none.
+
+Settings live in **`moose.config.yaml`**, one file shared by the whole moose
+family, with one top-level key per tool. `moose-lint` reads `lint:` and neither
+reads nor validates anything else, so the file grows as you adopt more of the
+family without any tool needing to know about the others.
+
+```yaml
+# moose.config.yaml
+meta:                                # moose-meta's section; moose-lint ignores it
+  schemas: ["google:okf:0.1"]
+
+lint:
+  paths: ["docs/**/*.md"]            # targets when none are given on the command line
+  exclude: ["**/drafts/**"]          # added to the built-in node_modules/.git defaults
+  templates: ["./templates.yaml"]    # your templates; their `types:` join the routing table
+  template: tgdp:how-to:1.6          # what to assume when a page declares no type
+  types:                             # an explicit doctype -> template mapping
+    api-operation: ./templates.yaml#api-operation
+  overrides:                         # repo policy; first matching glob wins
+    - files: "docs/api/**"
+      template: tgdp:reference:1.6
+```
+
+With that in place, CI runs a bare `moose-lint`.
+
+Discovery walks up from the working directory to the repository root, so it
+works from a subdirectory. `-c/--config <path>` names a file directly and skips
+discovery.
+
+Command-line flags win over the file, with one exception: `--exclude`
+**accumulates** with the configured excludes rather than replacing them, because
+narrowing a run should not quietly discard the repo's standing exclusions.
+
+### What fails loudly
+
+Validation inside `lint:` is strict — unknown keys are an error, not a silent
+default. Beyond that, four shapes are rejected rather than defaulted through,
+because each one silently discards a whole configuration:
+
+| shape | why it is not just "no config" |
+| --- | --- |
+| keys at the top level with no `lint:` | the un-nested file: your settings are present and unread |
+| a `Lint:` wrapper differing only in case | the keys are nested, so the check above cannot see them |
+| a `doc-structure-lint.config.yaml` and no `moose.config.yaml` | the un-renamed file, left behind by the rename |
+| a `moose.config.yaml` that exists but cannot be read | a directory by that name, a permissions problem |
+
+A file that is absent, empty, or that carries only other tools' sections is not
+an error. That is what keeps a shared file usable by a project that has not
+adopted this tool yet.
 
 ## Using it as a library
 
@@ -435,10 +538,30 @@ const run = await runLint({ inputs: ["docs/"] });
 ```
 
 `template` and `templates` are optional and mirror `--template` and
-`--templates`.
+`--templates`. `runLint` reads no configuration file — it is a function of the
+options you hand it, so a library caller is never surprised by a file on disk.
+Call `loadConfig()` yourself if you want the file.
 
-`-f json` emits `[{ file, success, errors: [{ type, heading, message, position }] }]`,
-which is what tool adapters parse.
+## Output formats
+
+| `-f` | for |
+| --- | --- |
+| `pretty` | reading. The default. |
+| `json` | tool adapters: `[{ file, success, errors: [{ type, heading, message, position }] }]` |
+| `github` | `::error file=…,line=…,col=…::` annotations, inline on a pull request |
+| `sarif` | code-scanning uploads — SARIF 2.1.0, one rule descriptor per finding type |
+
+The SARIF output declares every finding type in `tool.driver.rules` and
+references it by both `ruleId` and `ruleIndex`, so alerts group and filter
+properly rather than arriving as a flat list. Paths are relative and
+forward-slashed against a declared `SRCROOT`, on Windows as well as Linux.
+Skipped files become `note`-level notifications rather than results: a skip is a
+statement about the tool, which declined to look, not about the document — as
+results they would open alerts on files nothing examined.
+
+```bash
+moose-lint docs/ -f sarif > moose-lint.sarif
+```
 
 ## Migrating from `doc-structure-lint`
 
@@ -461,7 +584,8 @@ Section matching also changed. It used to pair template rules to document sectio
 by array index, so a single absent optional section misaligned every comparison
 after it. It is now one ordered pass over heading identity — see
 [ADR 01002](adrs/01002-match-sections-in-order-not-by-index.md). Templates that
-worked before still work; templates with optional sections now work *correctly*.
+worked before still work once `instructions:` and the `doc-structure-lint:`
+version key are gone; templates with optional sections now work *correctly*.
 
 `--template` still applies one template to every file, so an existing invocation
 keeps working unchanged. Adding `types:` to your templates and dropping the flag
@@ -475,10 +599,17 @@ is what turns a per-doctype run into one run over the whole tree — see
 npm install
 npm test
 npm run typecheck
+npm run smoke            # build, then exercise the real dist/cli.js
 npm run check:tgdp-pin   # has upstream moved past the built-ins' pin?
 ```
 
-Decisions are recorded in [`adrs/`](adrs/).
+`npm run smoke` exists because the suite runs against `src/`, where the built-in
+templates sit one directory deeper than they do in the bundled `dist/`. A path
+that is right in the repo and wrong in the package passes every test — which is
+how it happened once.
+
+Decisions are recorded in [`adrs/`](adrs/), and the conventions this rewrite
+settled on are in [`CLAUDE.md`](CLAUDE.md).
 
 ## License
 

@@ -15,6 +15,8 @@ and a record disagree, the code is what runs and the record needs fixing.
 | [01003](01003-remove-the-language-model-and-be-deterministic.md) | Remove the bundled language model; structure linting is deterministic |
 | [01004](01004-route-templates-by-the-type-frontmatter-key.md) | Route templates by a page's `type` frontmatter key |
 | [01005](01005-ship-tgdp-structure-templates-without-demoting-user-templates.md) | Ship TGDP structure templates as built-ins, without demoting user templates |
+| [01006](01006-take-the-h1-from-frontmatter-when-the-body-has-none.md) | Take the H1 from frontmatter when the body has none |
+| [01007](01007-read-settings-from-a-lint-section-of-a-shared-moose-config.md) | Read settings from a `lint:` section of a shared `moose.config.yaml` |
 
 ## Writing one
 

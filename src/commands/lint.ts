@@ -25,10 +25,10 @@ import {
 } from "../parsers/index.js";
 import type { Template, TemplateFile } from "../core/template.js";
 import {
+  classifyRef,
   listBuiltins,
-  loadTemplate,
+  loadResolvedTemplate,
   loadTemplateFile,
-  resolveExtends,
 } from "../core/template-registry.js";
 import {
   buildTypeIndex,
@@ -49,8 +49,12 @@ export interface LintOptions {
   inputs: string[];
   /** `--template`: a built-in id, a path, or a name inside `templates`. */
   template?: string;
-  /** `--templates`: a template file to resolve `template` as a name within. */
-  templates?: string;
+  /**
+   * `--templates`: template files whose `types:` join the routing table. A bare
+   * `--template <name>` is resolved as a name inside the first of them, which is
+   * the pairing the moose-docevals adapter invokes.
+   */
+  templates?: string | string[];
   /** `--as`: force an input format, by parser name. */
   as?: string;
   /** `--exclude`: globs removed from directory/glob expansion. */
@@ -64,6 +68,17 @@ export interface LintOptions {
   overrides?: TemplateOverride[];
   /** Config default, applied when a page declares no doctype. */
   defaultTemplate?: string;
+  /** Config's explicit doctype -> template ref map. */
+  types?: Record<string, string>;
+}
+
+/** Extensions that make a bare `--template` value a filename, not a name. */
+const TEMPLATE_FILE_EXTENSIONS = [".yaml", ".yml", ".json"];
+
+/** `--templates` accepts one path or several; normalize to a list. */
+function templateFiles(value: string | string[] | undefined): string[] {
+  if (value == null) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 export interface LintSummary {
@@ -142,7 +157,7 @@ function templateLoader(): (ref: string) => Promise<Template> {
   return (ref) => {
     let pending = cache.get(ref);
     if (!pending) {
-      pending = loadTemplate(ref).then(resolveExtends);
+      pending = loadResolvedTemplate(ref);
       cache.set(ref, pending);
     }
     return pending;
@@ -158,14 +173,27 @@ function templateLoader(): (ref: string) => Promise<Template> {
  */
 function cliTemplateRef(
   template: string | undefined,
-  templatesPath: string | undefined,
+  templatePaths: string[],
 ): string | undefined {
   if (!template) return undefined;
-  if (!templatesPath) return template;
-  if (template.includes("#") || template.includes("/") || template.includes("\\")) {
+  // A ref that names itself is passed through. Sniffing for `#`, `/` and `\`
+  // missed built-in ids, which contain none of them, so `-t tgdp:how-to:1.6`
+  // silently became a lookup for a template of that name inside the first
+  // `--templates` file the moment one was given.
+  if (template.includes("#")) return template;
+  if (classifyRef(template).kind !== "file") return template;
+  if (template.includes("/") || template.includes("\\")) return template;
+  // A bare filename names a file even without a separator: `--template
+  // custom.yaml` means that file, not a template called "custom.yaml" inside
+  // some other one.
+  if (TEMPLATE_FILE_EXTENSIONS.some((e) => template.toLowerCase().endsWith(e))) {
     return template;
   }
-  return `${templatesPath}#${template}`;
+  if (templatePaths.length === 0) return template;
+
+  // A bare name is a name inside a `--templates` file. Search them last-first,
+  // matching `buildTypeIndex`, so the file that wins routing also wins here.
+  return `${templatePaths[templatePaths.length - 1]}#${template}`;
 }
 
 /** The finding a page gets when it declares a doctype nothing serves. */
@@ -191,6 +219,8 @@ function unknownTypeFinding(
 
 interface LintContext {
   getTemplate: (ref: string) => Promise<Template>;
+  /** Absolute, forward-slashed form of a display path, for override globs. */
+  absoluteOf?: (file: string) => string;
   typeIndex: Map<string, TypeIndexEntry>;
   cliTemplate?: string;
   overrides?: TemplateOverride[];
@@ -242,6 +272,7 @@ async function lintOne(
   // page actually declared.
   const resolution = resolveTemplateRef({
     filePath: label,
+    absolutePath: ctx.absoluteOf?.(label),
     frontmatter: tree.frontmatter,
     cliTemplate: ctx.cliTemplate,
     overrides: ctx.overrides,
@@ -278,13 +309,9 @@ async function lintOne(
     );
   }
 
-  let template: Template;
-  try {
-    template = await ctx.getTemplate(resolution.ref);
-  } catch (err) {
-    // One unloadable template must not abort a run over a whole tree; it is
-    // reported against the pages that route to it.
-    return withResolution({
+  /** A broken template, reported against this page rather than thrown. */
+  const brokenTemplate = (err: unknown): LintFileResult =>
+    withResolution({
       file: label,
       success: false,
       findings: [
@@ -298,9 +325,29 @@ async function lintOne(
       ],
       template: resolution.ref,
     });
+
+  let template: Template;
+  try {
+    template = await ctx.getTemplate(resolution.ref);
+  } catch (err) {
+    // One unloadable template must not abort a run over a whole tree; it is
+    // reported against the pages that route to it.
+    return brokenTemplate(err);
   }
 
-  const findings = validateDocument(tree, template);
+  let findings: Finding[];
+  try {
+    findings = validateDocument(tree, template);
+  } catch (err) {
+    // Validation can raise for the same reason loading can: a template the
+    // author got wrong - an uncompilable `heading.pattern` is the live case.
+    // Without this the raise escapes `runLint` and kills the run, so one bad
+    // pattern hides the findings in every other page, which is the outcome the
+    // load path above exists to prevent.
+    if (err instanceof MooseLintError) return brokenTemplate(err);
+    throw err;
+  }
+
   return withResolution({
     file: label,
     success: findings.length === 0,
@@ -324,38 +371,45 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
   // The doctype -> template map. Built-ins go in first and user templates
   // overwrite them, so overriding `how-to` for a repo is one file with
   // `types: [how-to]` in it - no config entry, no flag.
+  const templatePaths = templateFiles(opts.templates);
+  const getTemplate = templateLoader();
+
   const userFiles: { ref: string; file: TemplateFile }[] = [];
-  if (opts.templates != null) {
-    userFiles.push({
-      ref: opts.templates,
-      file: await loadTemplateFile(opts.templates),
-    });
+  for (const ref of templatePaths) {
+    const file = await loadTemplateFile(ref);
+    // `extends` is resolved before `types` is read. A template that inherits
+    // its doctypes declares none of its own, so reading the raw file routes
+    // nothing to it - the override loads, merges, and is silently inert while
+    // the page goes to the built-in it meant to replace. The loader is cached,
+    // so this costs nothing the lint would not already pay.
+    const templates: Record<string, Template> = {};
+    for (const name of Object.keys(file.templates ?? {})) {
+      templates[name] = await getTemplate(`${ref}#${name}`);
+    }
+    userFiles.push({ ref, file: { ...file, templates } });
   }
-  const typeIndex = buildTypeIndex({ builtins: listBuiltins(), userFiles });
+
+  const typeIndex = buildTypeIndex({
+    builtins: listBuiltins(),
+    userFiles,
+    explicitTypes: opts.types,
+  });
 
   const ctx: LintContext = {
-    getTemplate: templateLoader(),
+    getTemplate,
+    absoluteOf: (file) => resolve(cwd, file).replace(/\\/g, "/"),
     typeIndex,
-    cliTemplate: cliTemplateRef(opts.template, opts.templates),
+    cliTemplate: cliTemplateRef(opts.template, templatePaths),
     overrides: opts.overrides,
     defaultTemplate: opts.defaultTemplate,
     explain: opts.explain === true,
   };
 
-  // A run with nothing to route by would skip every file and exit 0, which
-  // reads as a clean bill of health for a docset nothing checked.
-  if (
-    ctx.cliTemplate == null &&
-    typeIndex.size === 0 &&
-    ctx.defaultTemplate == null &&
-    (ctx.overrides ?? []).length === 0
-  ) {
-    throw new MooseLintError(
-      "No templates available to route by. Pass -t/--template <ref>, or " +
-        "--templates <file> whose templates declare the doctypes they serve " +
-        `with "types:". Run "moose-lint templates" to see what is available.`,
-    );
-  }
+  // `--template` applies to every file, so a ref that will not load is bad
+  // usage, not a property of any page. Resolved up front so it exits 2 with one
+  // message, rather than becoming an identical `template_error` finding on all
+  // 200 pages and exiting 1 - which reads to CI as "the docs are wrong".
+  if (ctx.cliTemplate != null) await getTemplate(ctx.cliTemplate);
 
   const usingStdin = opts.inputs.includes(STDIN_TOKEN);
   const fileInputs = opts.inputs.filter((input) => input !== STDIN_TOKEN);
@@ -386,9 +440,15 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
   }
 
   for (const file of files) {
-    const content = await readFile(resolve(cwd, file), "utf8");
     const ext = extname(file);
     const parser = forcedParser ?? parserForExtension(ext);
+    // The parser is chosen before the read, not after, because a file nothing
+    // can parse must not depend on being readable to be reported. Reading
+    // first pulls every skipped file into memory for nothing, and an
+    // unreadable one - a denied permission, a file a doc build moved mid-run -
+    // throws out of this loop, so a `.xyz` nobody asked us to parse takes the
+    // whole run down with it: exit 2 and no verdict for any of the pages after
+    // it, instead of one skip line and a report.
     if (!parser) {
       results.push(
         skip(
@@ -398,6 +458,7 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
       );
       continue;
     }
+    const content = await readFile(resolve(cwd, file), "utf8");
     results.push(await lintOne(file, content, parser, ctx));
   }
 
@@ -412,6 +473,25 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
   const skipped = results.filter((r) => r.skipped != null).length;
   const failed = results.filter((r) => r.skipped == null && !r.success).length;
   const checked = results.length - skipped;
+
+  // A run that found files and checked none of them is the worst thing this
+  // tool can do quietly: it exits 0 and reads as a clean bill of health for a
+  // docset nothing looked at. A repo that adopts moose-lint in CI before
+  // backfilling `type:` keys would get a permanently green job.
+  //
+  // This replaces a guard that tested `typeIndex.size === 0` before any file
+  // was read. That could never fire - the index is always seeded with the
+  // built-ins - so it protected nothing. Counting the outcome does.
+  //
+  // `--explain` is exempt: showing why nothing routed is exactly its job.
+  if (!ctx.explain && checked === 0 && skipped > 0) {
+    throw new MooseLintError(
+      `Nothing was checked: all ${skipped} file(s) were skipped. ` +
+        `Give a page a "type:" that a template serves, pass -t/--template <ref>, ` +
+        `or set "lint.template" as a default. Run "moose-lint <paths> --explain" ` +
+        `to see how each file resolved.`,
+    );
+  }
 
   return {
     results,

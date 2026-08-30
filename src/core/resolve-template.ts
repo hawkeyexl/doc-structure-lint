@@ -60,7 +60,7 @@ export interface Resolution {
   steps: ResolutionStep[];
 }
 
-/** Per-glob repo policy. Populated from config in a later PR. */
+/** Per-glob repo policy, from `moose.config.yaml`'s `lint.overrides`. */
 export interface TemplateOverride {
   files: string;
   template: string;
@@ -69,8 +69,8 @@ export interface TemplateOverride {
 export interface TypeIndexEntry {
   /** Ref that `loadTemplate` understands. */
   ref: string;
-  /** User templates outrank built-ins for the same doctype. */
-  source: "user" | "builtin";
+  /** Where the mapping came from; later sources outrank earlier ones. */
+  source: "builtin" | "user" | "config";
 }
 
 /** The frontmatter key a page uses to override its doctype's template. */
@@ -90,6 +90,13 @@ export function buildTypeIndex(params: {
   builtins?: { id: string; types: string[] }[];
   /** User template files, in the order they were supplied. */
   userFiles?: { ref: string; file: TemplateFile }[];
+  /**
+   * The config's explicit `types:` map. Highest precedence of the three, because
+   * it is the only one where someone wrote down this exact pairing on purpose -
+   * `types:` on a template says what that template is for, while this says what
+   * this repo does about a doctype.
+   */
+  explicitTypes?: Record<string, string>;
 }): Map<string, TypeIndexEntry> {
   const index = new Map<string, TypeIndexEntry>();
 
@@ -105,6 +112,10 @@ export function buildTypeIndex(params: {
         index.set(type, { ref: `${ref}#${name}`, source: "user" });
       }
     }
+  }
+
+  for (const [type, ref] of Object.entries(params.explicitTypes ?? {})) {
+    index.set(type, { ref, source: "config" });
   }
 
   return index;
@@ -169,6 +180,17 @@ function refFromFrontmatter(
 export interface ResolveParams {
   /** Path used for override glob matching. */
   filePath: string;
+  /**
+   * Absolute path of the same file, matched as a fallback.
+   *
+   * `overrides[].files` globs are written relative to the config file, while
+   * `filePath` is relative to the working directory. Those agree only when the
+   * tool is run from the config's own directory; anywhere else the glob matched
+   * nothing, the page fell through to its own `type`, and the run exited 0 with
+   * the repo's policy silently unapplied. The CLI now rebases the globs to
+   * absolute, so matching the absolute path too is what makes them land.
+   */
+  absolutePath?: string;
   /** The page's frontmatter, or null when it carries none. */
   frontmatter: Record<string, unknown> | null;
   /** `--template`: applies to every file in the run. */
@@ -213,7 +235,11 @@ export function resolveTemplateRef(params: ResolveParams): Resolution {
   });
 
   for (const override of params.overrides ?? []) {
-    if (matchesGlob(override.files, params.filePath)) {
+    if (
+      matchesGlob(override.files, params.filePath) ||
+      (params.absolutePath !== undefined &&
+        matchesGlob(override.files, params.absolutePath))
+    ) {
       steps.push({
         stage: "config-override",
         ref: override.template,

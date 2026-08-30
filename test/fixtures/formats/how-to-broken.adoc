@@ -1,0 +1,19 @@
+= Rotate an API key
+:type: how-to
+
+== Overview
+
+Rotating a key replaces the old secret without interrupting live traffic.
+
+== Before you start
+
+You need an account with the `admin` role.
+
+== Rotate the key
+
+Issue the replacement, then retire the old one.
+
+[source,bash]
+----
+widget keys rotate --id abc123
+----
