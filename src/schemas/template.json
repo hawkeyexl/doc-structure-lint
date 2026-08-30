@@ -53,11 +53,11 @@
       }
     },
     "sections": {
-      "description": "Section rules keyed by name, in document order. Each key describes one heading a level below its parent.",
+      "description": "Section rules keyed by name, in document order. Each key describes one heading a level below its parent. A name may not consist only of digits: JavaScript enumerates integer-like object keys first, in ascending numeric order, so an all-digit name would silently reorder the rules relative to how the template declares them - and declared order is most of what a section rule asserts. Prefix such a name (`v2024`, `step-1`).",
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
-        "^[A-Za-z0-9-_ ]+$": { "$ref": "#/definitions/section" }
+        "^(?![0-9]+$)[A-Za-z0-9-_ ]+$": { "$ref": "#/definitions/section" }
       }
     },
     "section": {
@@ -81,7 +81,7 @@
           "type": "boolean"
         },
         "repeat": {
-          "description": "Whether a slot rule (one that constrains neither `heading.const` nor `heading.pattern`) claims every consecutive section up to the next anchored rule. Without it a slot claims exactly one, so two adjacent slots each get their own section. No effect on a rule that does constrain its heading. Absent means false; see `required` for why no `default` is declared.",
+          "description": "Whether this rule may claim more than one section. On a rule that constrains its heading, it claims the run of consecutive sections whose headings satisfy it - how a doctype says \"one or more sections named `Symptom N`\". On a slot (a rule constraining neither `heading.const` nor `heading.pattern`) it claims every section up to the next anchored rule that could claim one. Without it either kind claims exactly one, so two adjacent slots each get their own section. Absent means false; see `required` for why no `default` is declared.",
           "type": "boolean"
         },
         "sequence": {

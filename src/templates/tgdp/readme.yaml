@@ -1,0 +1,142 @@
+info:
+  title: README (The Good Docs Project)
+  vendor: tgdp
+  pin: v1.6.0
+  source: https://gitlab.com/tgdp/templates/-/blob/v1.6.0/readme/template_readme.md
+
+# Derived from The Good Docs Project's README template. Almost every heading
+# upstream interpolates a project name, so this file leans on two devices:
+#
+#   * A heading that is *entirely* a placeholder (`## {Project Name}`) becomes a
+#     slot - a rule with no `heading` key - because there is no literal text to
+#     anchor on.
+#   * A heading that wraps a placeholder in stable words (`### Install {Project
+#     Name}`, `## Instructions for using {Project Name}`) gets a `pattern`
+#     anchored on those words. Patterns keep neighbouring sections tellable
+#     apart, which a run of adjacent slots cannot do.
+#
+# Only the project title is required. Upstream marks the logo and table of
+# contents optional outright, and treats the rest as boilerplate a project
+# customises or deletes; real READMEs routinely name the same content
+# differently or leave it out. So the teeth here are section *order*, the shape
+# of the instructions subsections, and content minimums that bite only once a
+# section is actually present.
+templates:
+  readme:
+    types:
+      - readme
+    # Tolerate a document that carries more than one top-level heading.
+    additionalSections: true
+    sections:
+      title:
+        description: >-
+          The project name. Upstream writes it as a placeholder heading, so
+          nothing here anchors on its text.
+        additionalSections: true
+        sections:
+          logo and badges:
+            description: >-
+              `## {Project} logo and badges`. Explicitly optional upstream.
+              Anchored on the words either side of the placeholder rather than
+              left as a slot, so it cannot swallow whatever section happens to
+              come first.
+            required: false
+            heading:
+              pattern: "\\b[Ll]ogos?\\b|\\b[Bb]adges?\\b"
+          project name:
+            description: >-
+              `## {Project Name}` - the heading is nothing but a placeholder,
+              so this is a slot. One section, never a run.
+            required: false
+            additionalSections: true
+          table of contents:
+            description: >-
+              Explicitly optional upstream. A table of contents that holds no
+              list is not one, hence the list minimum.
+            required: false
+            heading:
+              const: Table of contents
+            lists:
+              min: 1
+          project description:
+            description: What the project is and what it lets you do.
+            required: false
+            heading:
+              const: Project description
+            paragraphs:
+              min: 1
+            additionalSections: true
+          who this project is for:
+            description: The intended audience and their objective.
+            required: false
+            heading:
+              const: Who this project is for
+            paragraphs:
+              min: 1
+          project dependencies:
+            description: >-
+              Prerequisites. No list minimum: upstream's own troubleshooting
+              content shows these sections are as often tables, which the
+              parser does not count as lists.
+            required: false
+            heading:
+              const: Project dependencies
+          instructions for use:
+            description: >-
+              `## Instructions for using {Project Name}`, anchored on the
+              literal opening words. Its subsections are the install/configure/
+              run/troubleshoot procedure, each of which is itself optional and
+              itself heading-anchored.
+            required: false
+            heading:
+              pattern: "^Instructions\\b"
+            additionalSections: true
+            sections:
+              install:
+                description: "`### Install {Project Name}`."
+                required: false
+                heading:
+                  pattern: "^Install"
+                additionalSections: true
+              configure:
+                description: "`### Configure {Project Name}`."
+                required: false
+                heading:
+                  pattern: "^Configur"
+                additionalSections: true
+              run:
+                description: "`### Run {Project Name}`."
+                required: false
+                heading:
+                  pattern: "^Run(ning)?\\b"
+                additionalSections: true
+              troubleshoot:
+                description: "`### Troubleshoot {Project Name}`."
+                required: false
+                heading:
+                  pattern: "^Troubleshoot"
+                additionalSections: true
+          contributing guidelines:
+            description: How to contribute, or a link to the contributing guide.
+            required: false
+            heading:
+              const: Contributing guidelines
+            paragraphs:
+              min: 1
+          additional documentation:
+            description: Links to further reading.
+            required: false
+            heading:
+              const: Additional documentation
+          how to get help:
+            description: Support resources.
+            required: false
+            heading:
+              const: How to get help
+          terms of use:
+            description: The licence the project is published under.
+            required: false
+            heading:
+              const: Terms of use
+            paragraphs:
+              min: 1

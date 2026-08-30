@@ -8,14 +8,26 @@ import type { LintRun } from "../commands/lint.js";
 import type { FormatInfo } from "../commands/formats.js";
 import type { TemplateInfo, TemplatesInfo } from "../commands/templates.js";
 import { palette, type Colors } from "./color.js";
+import { renderSarif } from "./sarif.js";
 
-export type ReportFormat = "pretty" | "json" | "github";
+export type ReportFormat = "pretty" | "json" | "github" | "explain" | "sarif";
 
 /** Listing commands have nothing to annotate, so they offer no `github`. */
 export type ListFormat = "pretty" | "json";
 
 export interface ReportOptions {
   color?: boolean;
+  /**
+   * Directory the run's relative paths are relative to, forwarded to the SARIF
+   * reporter and ignored by the others. Defaults to the process cwd, which is
+   * right for the CLI because `runLint` defaults its `cwd` the same way.
+   *
+   * It is here rather than only on `renderSarif` because `render` is the entry
+   * point a library caller reaches for, and without it that caller was pinned
+   * to the process cwd with no way out short of bypassing `render` entirely -
+   * for the one reporter whose whole output is paths.
+   */
+  root?: string;
 }
 
 function plural(n: number, word: string): string {
@@ -90,26 +102,120 @@ export function renderJson(run: LintRun): string {
 }
 
 /**
- * GitHub workflow commands. Newlines are collapsed because an annotation is
- * one line by definition - a wrapped message would be silently truncated at
- * the first line break.
+ * Escape the data half of a workflow command - everything after the `::`.
+ *
+ * `%` is the format's escape character, so a message quoting a literal
+ * percentage makes GitHub read the two characters after it as a hex code and
+ * swallow them. A raw line break ends the command outright, spilling the rest
+ * of the message into the log as plain text that no annotation carries.
+ *
+ * `%` has to be replaced first. Replacing it last would rewrite the `%` of a
+ * `%0A` this function had just introduced, and the reader would see a literal
+ * `%250A` where the line break belonged.
+ */
+function escapeData(value: string): string {
+  return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+
+/**
+ * Escape a property value - the `file=...` half, which is stricter than data.
+ *
+ * Properties are comma-separated and the list ends at the next `::`, so a raw
+ * `,` or `:` inside a value redraws those boundaries. That is not a corner
+ * case: every absolute path on Windows carries a drive-letter colon, and
+ * `file=C:\docs\a.md` is enough for GitHub to mis-parse the command and drop
+ * the annotation - the entire report silently empty on a Windows runner, with
+ * the run still exiting 1 as if it had been posted.
+ */
+function escapeProperty(value: string): string {
+  return escapeData(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
+}
+
+/**
+ * GitHub workflow commands: one `::error` annotation per finding.
+ *
+ * Line breaks are escaped rather than collapsed to spaces, as this once did.
+ * `%0A` is the format's own answer and GitHub renders it as a multi-line
+ * annotation, so the message arrives whole; collapsing threw away the author's
+ * line breaks to solve a problem the escape already solves, and its `\r?\n`
+ * pattern let a bare carriage return through into the command untouched.
  */
 export function renderGithub(run: LintRun): string {
   const lines: string[] = [];
   for (const result of run.results) {
     for (const finding of result.findings) {
       const params = [
-        `file=${result.file}`,
+        `file=${escapeProperty(result.file)}`,
         `line=${finding.position.start.line}`,
         `col=${finding.position.start.column}`,
       ];
-      const message = `[${finding.type}] ${describeFinding(finding)}`.replace(
-        /\r?\n/g,
-        " ",
+      const message = escapeData(
+        `[${finding.type}] ${describeFinding(finding)}`,
       );
       lines.push(`::error ${params.join(",")}::${message}`);
     }
   }
+  return lines.join("\n");
+}
+
+/**
+ * `--explain`: the resolution chain per file, rather than findings.
+ *
+ * Printing every stage, including the ones that had nothing to say, is the
+ * point. "Which template linted this page?" is usually asked because the answer
+ * was surprising, and the surprising part is almost always a stage the reader
+ * forgot applies - a stray `$template`, an override glob matching more than
+ * intended. A report that showed only the winning stage would hide exactly the
+ * thing being looked for.
+ */
+export function renderExplain(run: LintRun, opts: ReportOptions = {}): string {
+  const c = palette(opts.color ?? false);
+  const lines: string[] = [];
+
+  for (const result of run.results) {
+    // Not the pass/fail glyphs: `--explain` reports whether a page was routed,
+    // and a routed page may still be full of findings. Reusing the tick would
+    // read as a clean bill of health for a document nothing has looked at yet.
+    const chosen = result.template;
+    lines.push(`${chosen ? c.cyan("▸") : c.dim("-")} ${c.bold(result.file)}`);
+
+    const steps = result.resolution?.steps ?? [];
+    if (steps.length === 0) {
+      lines.push(`    ${c.dim("(no resolution recorded)")}`);
+    }
+    for (const step of steps) {
+      const mark = step.ref ? c.green("→") : c.dim("·");
+      const label = step.ref ? c.bold(step.ref) : c.dim(step.detail);
+      const suffix = step.ref ? `  ${c.dim(step.detail)}` : "";
+      lines.push(`    ${mark} ${step.stage.padEnd(20)} ${label}${suffix}`);
+    }
+
+    const cause = result.resolution?.cause;
+    if (cause === "unknown-type") {
+      const type = result.resolution?.unknownType ?? "(none recorded)";
+      const near = result.resolution?.suggestions ?? [];
+      const known = result.resolution?.knownTypes ?? [];
+      // The same fallback the pretty reporter gives. Without it a typo with no
+      // near miss - which is most of them, since a near miss needs the typo to
+      // be close - printed the failure and nothing to act on, while the plain
+      // lint output for that page listed every doctype available.
+      const hint = near.length
+        ? `; did you mean ${near.join(", ")}?`
+        : known.length
+          ? `; known doctypes: ${known.join(", ")}`
+          : "";
+      lines.push(`    ${c.red("✗")} no template serves type "${type}"${hint}`);
+    } else if (cause === "no-type") {
+      lines.push(`    ${c.dim("skipped: the page declares no type")}`);
+    }
+    lines.push("");
+  }
+
+  const routed = run.results.filter((r) => r.template != null).length;
+  lines.push(
+    `${run.results.length} file${run.results.length === 1 ? "" : "s"}, ` +
+      `${routed} routed, ${run.results.length - routed} unrouted`,
+  );
   return lines.join("\n");
 }
 
@@ -123,6 +229,10 @@ export function render(
       return renderJson(run);
     case "github":
       return renderGithub(run);
+    case "sarif":
+      return renderSarif(run, opts.root === undefined ? {} : { root: opts.root });
+    case "explain":
+      return renderExplain(run, opts);
     case "pretty":
     default:
       return renderPretty(run, opts);

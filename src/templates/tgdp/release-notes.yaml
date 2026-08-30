@@ -1,0 +1,102 @@
+# Release notes, derived from The Good Docs Project's published template at
+# v1.6.0 ("Iron"):
+# https://gitlab.com/tgdp/templates/-/blob/v1.6.0/release-notes/template_release-notes.md
+#
+# Almost everything here is optional, on purpose. A release notes page is a
+# report on one release, and no release has every kind of change in it: a
+# maintenance release with three bug fixes and nothing else is a correct
+# release notes page, and a template that demanded "New features" would be
+# wrong about it. What the doctype genuinely mandates is the title. What this
+# template is *for* is asserting that the sections which do appear carry
+# upstream's names and appear in upstream's order - so `## Bug Fixes`,
+# `## Fixes`, or a "Bug fixes" section placed above "New features" is reported,
+# while a page that simply omits four of the six categories is not.
+#
+# That assertion is why the page-level rule does not set `additionalSections`:
+# an unrecognised H2 has to be reported for the naming check to have any force.
+# Inside a category the opposite holds - upstream prescribes the category
+# headings, not how a category is subdivided - so each H2 allows subsections.
+#
+# There are no paragraph, list, or code-block minimums anywhere. Upstream marks
+# only the release date as non-optional prose, and a category whose body is a
+# single bullet list, a table, or a paragraph are all ordinary shapes for this
+# doctype; counting blocks would fail correct pages without catching a real
+# structural mistake.
+info:
+  title: Release notes (The Good Docs Project)
+  version: "1.6.0"
+  source: https://gitlab.com/tgdp/templates/-/blob/v1.6.0/release-notes/template_release-notes.md
+
+templates:
+  release-notes:
+    types:
+      - release-notes
+    sections:
+      release-notes:
+        description: >-
+          The page itself. Upstream titles it
+          `Release notes - {Product name} {Release number}`; only the braced
+          parts are placeholders, so the literal prefix is the one thing this
+          template insists on. Its body carries the release version, the
+          release date, and an optional high-level summary.
+        heading:
+          pattern: '^Release [Nn]otes\b'
+        sections:
+          new-features:
+            description: Functionality this release adds. Omitted by a release that adds none.
+            heading:
+              const: New features
+            required: false
+            additionalSections: true
+
+          new-features-requiring-configuration-updates:
+            description: >-
+              New functionality that does not switch itself on. Separated from
+              `New features` upstream because these entries are action items
+              for the reader, not announcements.
+            heading:
+              const: New features requiring configuration updates
+            required: false
+            additionalSections: true
+
+          improvements:
+            description: Changes to functionality that already existed - speed, usability, behaviour.
+            heading:
+              const: Improvements
+            required: false
+            additionalSections: true
+
+          api-web-service-updates:
+            description: Changes to programmatic interfaces, which have a different audience from the rest of the page.
+            heading:
+              const: API/Web service updates
+            required: false
+            additionalSections: true
+
+          bug-fixes:
+            description: Defects resolved in this release.
+            heading:
+              const: Bug fixes
+            required: false
+            additionalSections: true
+            sections:
+              known-issues:
+                description: >-
+                  Defects that are known and *not* resolved. Upstream nests this
+                  under `Bug fixes` rather than making it a category of its own,
+                  which puts what is still broken next to what was fixed.
+                heading:
+                  const: Known issues
+                required: false
+                additionalSections: true
+
+          deprecation-notice:
+            description: >-
+              Functionality being retired, with the date it stops being
+              supported and what replaces it. Upstream writes the heading as
+              `Optional: Deprecation notice`, so the pattern accepts the
+              published form as well as the one a real page would use.
+            heading:
+              pattern: '^(Optional: )?Deprecation notice$'
+            required: false
+            additionalSections: true

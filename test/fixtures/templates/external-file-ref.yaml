@@ -1,0 +1,12 @@
+# A `$ref` at a local file. The loader hands the dereferencer an already-parsed
+# object, so there is no base path and a relative `$ref` is opened against the
+# process working directory - this one names a real fixture from the repo root.
+# It resolves, so a loader that follows it reads the file and loads clean,
+# saying nothing: the local-read half of the vector, and the reason the test
+# asserts a schema rejection rather than a file-open error.
+templates:
+  how-to:
+    types: [how-to]
+    sections:
+      overview:
+        $ref: "./test/fixtures/templates/single.yaml#/templates/how-to/sections/overview"

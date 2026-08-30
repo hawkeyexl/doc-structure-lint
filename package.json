@@ -42,7 +42,9 @@
     "commitlint": "commitlint --edit",
     "semantic-release": "semantic-release",
     "prepare": "husky",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "smoke": "npm run build && node scripts/smoke.mjs",
+    "check:tgdp-pin": "node scripts/check-tgdp-pin.mjs"
   },
   "keywords": [
     "documentation",
@@ -63,6 +65,7 @@
   },
   "dependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.7.3",
+    "@xmldom/xmldom": "^0.9.12",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "asciidoctor": "^3.0.4",
@@ -71,6 +74,7 @@
     "fast-glob": "^3.3.2",
     "github-slugger": "^2.0.0",
     "mdast-util-to-string": "^4.0.0",
+    "parse5": "^8.0.1",
     "picocolors": "^1.1.1",
     "picomatch": "^4.0.4",
     "remark-frontmatter": "^5.0.0",

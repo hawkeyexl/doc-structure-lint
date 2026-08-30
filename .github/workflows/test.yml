@@ -16,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v6
         with:
@@ -34,3 +36,10 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      # The suite runs against `src/`, where the built-in templates sit one
+      # directory deeper than they do in the bundled `dist/`. A path that is
+      # right in the repo and wrong in the package passes every test above, so
+      # the built CLI gets exercised the way a user would run it.
+      - name: Smoke-test the built package
+        run: npm run smoke

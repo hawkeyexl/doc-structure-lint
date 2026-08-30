@@ -1,0 +1,69 @@
+# Concept, derived from The Good Docs Project's `concept/template_concept.md`
+# at release v1.6.0. The upstream Markdown is vendored at
+# `test/fixtures/tgdp/template_concept.md` and linted against this file, so the
+# two cannot drift.
+#
+# Serves Diataxis's "explanation" as well as TGDP's "concept": they are the
+# same shape under two names.
+#
+# Almost every heading in this doctype is optional - upstream marks all but
+# "Use cases" with an `(Optional)` prefix - so this template mostly constrains
+# *which* sections may appear and *in what order*, and says very little about
+# what goes inside them. That is deliberate: a concept page is prose, and a
+# minimum paragraph count per section would fail pages a reader would call
+# correct.
+#
+# The `(\(Optional\) )?` alternative in each pattern is what lets upstream's own
+# file lint clean: it ships the authoring marker in the literal heading text,
+# where a real page writes just the section name.
+info:
+  title: Concept (The Good Docs Project)
+  version: "1.6.0"
+  source: https://gitlab.com/tgdp/templates/-/blob/v1.6.0/concept/template_concept.md
+
+templates:
+  concept:
+    types:
+      - concept
+      - explanation
+    sections:
+      title:
+        description: >-
+          The page title, whatever the author calls the concept. Its body is the
+          summary that introduces the concept and the definition that follows -
+          upstream notes the definition deliberately carries no heading of its
+          own, so it lives here rather than in a section.
+        paragraphs:
+          min: 1
+        # A concept page explains something, and explanations grow sections the
+        # published template never named. The four below are the ones TGDP
+        # names; anything else the author needs is allowed through.
+        additionalSections: true
+        sections:
+          background:
+            description: Context, prehistory, or background for the concept.
+            heading:
+              pattern: '^(\(Optional\) )?Background$'
+            required: false
+          use cases:
+            description: >-
+              How a reader benefits from the concept. The one section upstream
+              does not mark optional.
+            heading:
+              const: Use cases
+          comparison:
+            description: >-
+              A comparison of the options or alternatives the concept sits
+              among. Upstream titles it `Comparison of {thing being compared}`,
+              so only the literal prefix is anchored.
+            heading:
+              pattern: '^(\(Optional\) )?Comparison( of .+)?$'
+            required: false
+          related resources:
+            description: >-
+              Links out to related documentation. Upstream recommends "Related
+              concepts" or "Additional information" as more descriptive names,
+              so all three are accepted.
+            heading:
+              pattern: '^(\(Optional\) )?(Related resources|Related concepts|Additional information)$'
+            required: false

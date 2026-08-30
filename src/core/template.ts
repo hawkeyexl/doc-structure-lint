@@ -3,6 +3,7 @@
  * authority that user input is validated against; this is the shape the rest of
  * the code reads once that validation has passed.
  */
+import { compilePattern } from "../rules/index.js";
 import type {
   CodeBlocksRule,
   HeadingRule,
@@ -22,12 +23,16 @@ export interface TemplateSection {
   lists?: ListsRule;
   sequence?: SequenceRule;
   /**
-   * For a slot rule, whether it may claim more than one section. Default
-   * false: a placeholder heading stands for one section unless the template
-   * says otherwise. TGDP's repeated placeholders - `{Task name}`, `Symptom 1`
-   * - set this; a template that simply does not constrain a heading, like a
-   * `Setup` section between two other named ones, does not and must not, or it
-   * would swallow every section after it.
+   * Whether this rule may claim more than one section. Default false.
+   *
+   * On an anchored rule it claims the run of consecutive sections whose
+   * headings satisfy it - how a doctype says "one or more sections named
+   * `Symptom N`" without giving up checking the heading text. On a slot it
+   * claims every section up to the next anchored rule that could claim one.
+   *
+   * Opt-in either way. A slot that repeated by default would swallow the
+   * section belonging to the slot after it, which adjacent unconstrained
+   * sections - `Setup` then `Usage` - make an ordinary shape.
    */
   repeat?: boolean;
   /** Allow document sections this template does not describe. Default false. */
@@ -59,9 +64,12 @@ export function isRequired(rule: TemplateSection): boolean {
 
 /**
  * A rule is a "slot" when it constrains no heading text - TGDP's
- * `## {Task name}` and `## Symptom 1` are the motivating cases. Slots match any
- * heading, and are greedy (see `match.ts`), because a placeholder heading in a
- * published template means "one or more sections go here", not "exactly one".
+ * `## {Task name}` is the motivating case. A slot matches any heading, and
+ * claims exactly one section unless it sets `repeat`.
+ *
+ * Being a slot changes more than heading matching: `match.ts` reads it when
+ * deciding what may end a repeating run, and a slot is the one kind of rule
+ * that cannot distinguish the section it wants from any other.
  */
 export function isSlot(rule: TemplateSection): boolean {
   return !rule.heading?.const && !rule.heading?.pattern;
@@ -72,7 +80,7 @@ export function headingMatches(title: string, rule: TemplateSection): boolean {
   if (isSlot(rule)) return true;
   if (rule.heading?.const !== undefined) return title === rule.heading.const;
   if (rule.heading?.pattern !== undefined) {
-    return new RegExp(rule.heading.pattern).test(title);
+    return compilePattern(rule.heading.pattern).test(title);
   }
   return true;
 }

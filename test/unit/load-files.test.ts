@@ -5,6 +5,9 @@ import { dirname, join } from "node:path";
 import { resolveTargets } from "../../src/core/load-files.js";
 import { MooseLintError } from "../../src/types.js";
 
+/** Config globs reach `resolveTargets` posix-separated, even on Windows. */
+const toPosix = (value: string): string => value.split("\\").join("/");
+
 let dir: string;
 
 async function write(rel: string): Promise<void> {
@@ -61,6 +64,39 @@ describe("resolveTargets", () => {
     const files = await resolveTargets({
       inputs: ["docs"],
       exclude: ["**/drafts/**"],
+      cwd: dir,
+    });
+    expect(files).toContain("docs/intro.md");
+    expect(files).not.toContain("docs/drafts/wip.md");
+  });
+
+  // An exclude out of a config file is absolute by the time it reaches here:
+  // `rebaseConfig` resolves it against the config's own directory, which is
+  // what makes `moose.config.yaml` mean the same thing from any working
+  // directory. A directory input then walks with a *cwd-relative* pattern, so
+  // an absolute ignore is being matched against relative entries - and whether
+  // that works is fast-glob's business, not ours.
+  //
+  // It does: fast-glob resolves ignore patterns against its own `cwd` before
+  // matching. These two cases pin that, because the alternative is the quietest
+  // failure this tool has - every `exclude:` silently matching nothing, the
+  // drafts getting linted, and the run still exiting 0.
+  it("applies an absolute exclude glob to a directory input", async () => {
+    const files = await resolveTargets({
+      inputs: ["docs"],
+      exclude: [`${toPosix(dir)}/**/drafts/**`],
+      cwd: dir,
+    });
+    expect(files).toContain("docs/intro.md");
+    expect(files).not.toContain("docs/drafts/wip.md");
+  });
+
+  // The same exclude against a glob input, which takes the other branch of the
+  // walk. Pinned beside the case above so the two cannot drift apart.
+  it("applies an absolute exclude glob to a glob input", async () => {
+    const files = await resolveTargets({
+      inputs: ["docs/**/*.md"],
+      exclude: [`${toPosix(dir)}/**/drafts/**`],
       cwd: dir,
     });
     expect(files).toContain("docs/intro.md");

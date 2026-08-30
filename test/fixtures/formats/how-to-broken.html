@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="type" content="how-to" />
+    <title>Install the Moose widget</title>
+    <link rel="stylesheet" href="/assets/docs.css" />
+  </head>
+  <body>
+    <main class="content">
+      <article>
+        <h1>Install the <code>moose</code> widget</h1>
+
+        <section id="overview">
+          <h2>Overview</h2>
+          <p>
+            This guide explains how to install the <code>moose</code> widget and
+            confirm that it runs. Follow it when you are setting up a new
+            workspace, or after upgrading to a major release.
+          </p>
+        </section>
+
+        <section id="before-you-start">
+          <h2>Before you start</h2>
+          <p>Make sure you have the following:</p>
+          <ul>
+            <li>Node.js 24 or later, on your <code>PATH</code>.</li>
+            <li>Write access to the workspace you are installing into.</li>
+            <li>
+              A registry token, if you install from a
+              <a href="/reference/registries">private registry</a>.
+            </li>
+          </ul>
+        </section>
+
+        <section id="install-the-widget">
+          <h2>Install the widget</h2>
+          <p>Install the widget into the workspace you want it in.</p>
+          <ol>
+            <li>
+              <p>Open a terminal in the workspace root.</p>
+            </li>
+            <li>
+              <p>Install the package:</p>
+              <pre><code class="language-bash">npm install moose-widget</code></pre>
+            </li>
+            <li>
+              <p>Add the widget to your configuration:</p>
+              <pre><code class="language-yaml">widgets:
+  - moose</code></pre>
+            </li>
+          </ol>
+
+          <section id="verify-the-installation">
+            <h3>Verify the installation</h3>
+            <p>Print the installed version. Any version number means it worked.</p>
+            <pre><code class="language-bash">npx moose-widget --version</code></pre>
+            <div class="admonition note">
+              <p>
+                The first run downloads the widget's assets, so it takes longer
+                than later runs.
+              </p>
+            </div>
+          </section>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>
