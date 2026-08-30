@@ -184,7 +184,7 @@ configuration, not about the documents.
 
 ## Commands
 
-```
+```text
 moose-lint [paths...]   Lint, routing each page by its `type`. -t/--template <ref>,
                         --templates <path...>, -c/--config <path>, --explain,
                         --as <format>, --exclude <glob...>,
@@ -292,7 +292,7 @@ heading:
   const: Exact heading text # or:
   pattern: ^Regex against the heading$
 required: true # default true
-repeat: false # this rule may claim a run of sections, not just one
+repeat: false # default false; true claims a run of sections, not just one
 additionalSections: false # allow subsections this template does not describe
 sections: {} # nested section rules, in document order
 ```
@@ -394,6 +394,14 @@ $ moose-lint page.md --templates templates.yaml
 
 `Overview`, `Before you start`, and the repeating task sections are all still
 checked. Only `See also` became optional.
+
+### Templates are trusted input
+
+A template is executable configuration, at the same trust level as the linter
+itself or an ESLint config. `heading.pattern` and the `patterns:` under
+`paragraphs` are full JavaScript regular expressions, compiled and run as
+written. Review a template you did not write, including one `extends` fetches
+from a URL, the way you would any other executable configuration.
 
 ## Built-in doctype templates
 
@@ -576,7 +584,8 @@ Section matching also changed. It used to pair template rules to document sectio
 by array index, so a single absent optional section misaligned every comparison
 after it. It is now one ordered pass over heading identity — see
 [ADR 01002](adrs/01002-match-sections-in-order-not-by-index.md). Templates that
-worked before still work; templates with optional sections now work *correctly*.
+worked before still work once `instructions:` and the `doc-structure-lint:`
+version key are gone; templates with optional sections now work *correctly*.
 
 `--template` still applies one template to every file, so an existing invocation
 keeps working unchanged. Adding `types:` to your templates and dropping the flag

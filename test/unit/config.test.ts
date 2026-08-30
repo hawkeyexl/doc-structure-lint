@@ -210,6 +210,17 @@ describe("parseConfig", () => {
     it("does not fire on a sibling tool's key", () => {
       expect(parseConfig("schemas: [okf]\n", "x")).toEqual({});
     });
+
+    // The message used to name `moose.config.yaml` whatever file was actually
+    // read, so someone running `-c my-custom.yaml` was told about a file they
+    // had not mentioned and went looking for the wrong one.
+    it("names the file it read, not the conventional one", async () => {
+      const message = await messageOf(async () =>
+        parseConfig('paths: ["docs/**/*.md"]\n', "my-custom.yaml"),
+      );
+      expect(message).toContain("my-custom.yaml");
+      expect(message).not.toContain("moose.config.yaml");
+    });
   });
 
   describe("the miscased wrapper", () => {

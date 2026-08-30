@@ -128,9 +128,13 @@ function describeError(error: ErrorObject): string {
 function rejectUnNested(root: Record<string, unknown>, source: string): void {
   const stray = SECTION_KEYS.filter((key) => key in root);
   if (stray.length === 0) return;
+  // The convention is named after the shared file, but the message must
+  // describe the file the user actually passed: telling someone who ran
+  // `-c my-custom.yaml` about `moose.config.yaml` reads as a complaint about a
+  // file they never mentioned, and sends them looking for the wrong one.
   throw new MooseLintError(
     `${source}: found ${stray.map((key) => `"${key}:"`).join(", ")} at the top level, ` +
-      `but no "${SECTION_KEY}:" key. ${CONFIG_FILENAME} is shared across the moose family, ` +
+      `but no "${SECTION_KEY}:" key. This file is shared across the moose family, ` +
       `so every moose-lint setting belongs under a top-level "${SECTION_KEY}:" key. ` +
       `Indent the file's contents one level and add that key.`,
   );
@@ -234,6 +238,10 @@ function ancestorsOf(cwd: string): string[] {
   for (;;) {
     dirs.push(dir);
     // A worktree's `.git` is a file, not a directory; both are the boundary.
+    // Sync on purpose, in an async function: this decides how far the loop
+    // walks, so an async probe would have to be awaited in sequence anyway.
+    // It runs once per ancestor directory - single digits - and keeping it
+    // sync is what lets the boundary be an ordinary loop condition.
     if (existsSync(join(dir, ".git"))) break;
     const parent = dirname(dir);
     if (parent === dir) break;

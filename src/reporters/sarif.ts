@@ -152,6 +152,10 @@ function underRoot(posix: string, root: string): string | null {
   // directory. Retry that way only when both sides are drive paths - anywhere
   // else, two paths differing in case are two different files.
   if (DRIVE.test(posix) && DRIVE.test(root)) {
+    // The comparison case-folds but the slice does not, which reads like a bug
+    // and is not: case folding leaves length unchanged, so `root.length` still
+    // indexes the same boundary, and slicing the original is what keeps the
+    // reported path in the casing the author actually used.
     if (posix.toLowerCase().startsWith(root.toLowerCase())) {
       return posix.slice(root.length);
     }

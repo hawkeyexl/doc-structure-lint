@@ -306,6 +306,78 @@ describe("loadTemplate", () => {
     expect(message).toContain('no template named "nope"');
     expect(message).toContain("how-to, reference");
   });
+
+  // The template map is a plain object parsed from YAML, so `#constructor` and
+  // `#toString` used to reach a member inherited from `Object.prototype`. That
+  // member is truthy, so the "no template named" guard let it through and a
+  // function came back as a template. Carrying no `sections`, it checked the
+  // document against nothing, and the file was reported as PASSING.
+  it("reports a fragment naming an inherited object member as no such template", async () => {
+    const ctor = await rejectionMessage(loadTemplate(join(fixtures, "multi.yaml#constructor")));
+    expect(ctor).toContain('no template named "constructor"');
+    expect(ctor).toContain("how-to, reference");
+
+    const str = await rejectionMessage(loadTemplate(join(fixtures, "multi.yaml#toString")));
+    expect(str).toContain('no template named "toString"');
+  });
+});
+
+/**
+ * External `$ref` resolution is off. A template file is untrusted input - it can
+ * be fetched over http, or written by someone other than whoever runs the lint -
+ * and the dereferencer resolves `$ref` targets by reading files and making
+ * requests from the linting host. Left on, `$ref: /etc/passwd` or
+ * `$ref: http://169.254.169.254/...` in a template turned a lint run into an
+ * arbitrary read.
+ *
+ * With external resolution off such a `$ref` is not fetched and not followed; it
+ * is simply left standing, and the schema - `additionalProperties: false` on
+ * every section rule - then rejects the file for carrying it.
+ */
+describe("`$ref` resolution stays inside the file", () => {
+  // The regression risk of turning it off: intra-file `$ref` is how a template
+  // file shares one section rule between templates, and it must survive.
+  it("resolves an internal `$ref` shared between two templates", async () => {
+    const file = await loadTemplateFile(join(fixtures, "internal-ref.yaml"));
+
+    const howTo = file.templates?.["how-to"]?.sections?.["next steps"];
+    expect(howTo?.heading?.const).toBe("Next steps");
+    expect(howTo?.required).toBe(false);
+    expect(howTo?.paragraphs?.min).toBe(1);
+
+    const reference = file.templates?.["reference"]?.sections?.["next steps"];
+    expect(reference?.heading?.const).toBe("Next steps");
+    expect(reference?.paragraphs?.min).toBe(1);
+  });
+
+  // This one reached the network: the fixture's host does not exist, and the
+  // failure it used to produce was "Error downloading ... fetch failed" - which
+  // is proof the request was made.
+  it("rejects a `$ref` at an http url rather than fetching it", async () => {
+    const source = join(fixtures, "external-http-ref.yaml");
+    const message = await rejectionMessage(loadTemplateFile(source));
+
+    expect(message).toContain("/templates/how-to/sections/overview");
+    expect(message).toContain("must NOT have additional properties");
+    expect(message).toContain("$ref");
+    // Not "could not resolve a `$ref`": the point is that nothing was fetched,
+    // not that fetching failed.
+    expect(message).not.toContain("could not resolve");
+  });
+
+  // The fixture's `$ref` names a file that really is there, so this used to
+  // load clean - the read succeeded and nothing anywhere said it had happened.
+  // Once the ref is no longer followed the target stops mattering, so the test
+  // no longer depends on where the process is running from.
+  it("rejects a `$ref` at a local file rather than reading it", async () => {
+    const source = join(fixtures, "external-file-ref.yaml");
+    const message = await rejectionMessage(loadTemplateFile(source));
+
+    expect(message).toContain("/templates/how-to/sections/overview");
+    expect(message).toContain("must NOT have additional properties");
+    expect(message).toContain("$ref");
+    expect(message).not.toContain("could not resolve");
+  });
 });
 
 describe("resolveExtends", () => {

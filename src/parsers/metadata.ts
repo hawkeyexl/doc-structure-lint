@@ -67,8 +67,13 @@ export function withMetadataTitle(
   metadata: Record<string, unknown> | null,
   position: Position | null,
 ): Block[] {
-  const title = metadata?.["title"];
-  if (typeof title !== "string" || title.length === 0) return blocks;
+  const declared = metadata?.["title"];
+  const title = typeof declared === "string" ? declared.trim() : null;
+  // Trimmed, not merely non-empty: `title: "   "` is as absent as no title at
+  // all, and admitting it would give the document a synthetic H1 with a blank
+  // heading - which every template then reports as the wrong title, naming
+  // nothing the author could search for.
+  if (title === null || title.length === 0) return blocks;
   if (position === null) return blocks;
   if (blocks.some((b) => b.type === "heading" && b.level === 1)) return blocks;
 

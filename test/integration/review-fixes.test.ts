@@ -10,7 +10,7 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runLint } from "../../src/commands/lint.js";
 import { matchSections } from "../../src/core/match.js";
 import { markdownParser } from "../../src/parsers/markdown.js";
@@ -428,5 +428,68 @@ describe("a bare --template filename names a file", () => {
     });
     expect(run.results[0]!.template).toBe(custom);
     expect(run.results[0]!.findings).toEqual([]);
+  });
+});
+
+describe("a file no parser claims is skipped without being opened", () => {
+  // The read ran before the parser lookup, so a file the run was always going
+  // to skip was loaded into memory anyway - and when that read failed, the
+  // exception left the loop. One `.xyz` the process could not open (a denied
+  // permission, a file a doc build moved mid-run) therefore aborted the whole
+  // run with exit 2 and no report at all, where it owed a skip line for that
+  // file and a verdict for every other page.
+  //
+  // The denial is injected rather than staged on disk because no fixture
+  // produces it on every platform: `resolveTargets` walks a directory instead
+  // of handing it to the loop, so EISDIR never reaches this code, and `chmod`
+  // does not deny a read on Windows.
+  it("reports an unreadable one as a skip and still lints its siblings", async () => {
+    const denied = await file("notes.xyz", "not a document");
+    const page = await file("page.md", `---\ntype: how-to\n---\n\n${HOW_TO}`);
+
+    vi.resetModules();
+    vi.doMock("node:fs/promises", async () => {
+      const real =
+        await vi.importActual<typeof import("node:fs/promises")>(
+          "node:fs/promises",
+        );
+      return {
+        ...real,
+        readFile: async (path: string | URL, encoding: "utf8") => {
+          // Only this one path is denied. Every other read - the built-in
+          // template the sibling routes to, among them - has to go through, or
+          // the test would pass for the wrong reason.
+          if (path === denied) {
+            throw Object.assign(
+              new Error(`EACCES: permission denied, open '${denied}'`),
+              { code: "EACCES" },
+            );
+          }
+          return real.readFile(path, encoding);
+        },
+      };
+    });
+
+    try {
+      const { runLint: lintWithDeniedRead } = await import(
+        "../../src/commands/lint.js"
+      );
+      const run = await lintWithDeniedRead({
+        inputs: [denied, page],
+        cwd: dir,
+      });
+
+      const skipped = run.results.find((r) => r.file.endsWith("notes.xyz"))!;
+      expect(skipped.skipped).toBe("unsupported-format");
+      expect(skipped.reason).toContain('no parser is registered for ".xyz"');
+      // The point: the run got past it.
+      expect(run.results.find((r) => r.file.endsWith("page.md"))!.success).toBe(
+        true,
+      );
+      expect(run.summary).toMatchObject({ checked: 1, passed: 1, skipped: 1 });
+    } finally {
+      vi.doUnmock("node:fs/promises");
+      vi.resetModules();
+    }
   });
 });

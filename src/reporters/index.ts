@@ -17,6 +17,17 @@ export type ListFormat = "pretty" | "json";
 
 export interface ReportOptions {
   color?: boolean;
+  /**
+   * Directory the run's relative paths are relative to, forwarded to the SARIF
+   * reporter and ignored by the others. Defaults to the process cwd, which is
+   * right for the CLI because `runLint` defaults its `cwd` the same way.
+   *
+   * It is here rather than only on `renderSarif` because `render` is the entry
+   * point a library caller reaches for, and without it that caller was pinned
+   * to the process cwd with no way out short of bypassing `render` entirely -
+   * for the one reporter whose whole output is paths.
+   */
+  root?: string;
 }
 
 function plural(n: number, word: string): string {
@@ -91,22 +102,55 @@ export function renderJson(run: LintRun): string {
 }
 
 /**
- * GitHub workflow commands. Newlines are collapsed because an annotation is
- * one line by definition - a wrapped message would be silently truncated at
- * the first line break.
+ * Escape the data half of a workflow command - everything after the `::`.
+ *
+ * `%` is the format's escape character, so a message quoting a literal
+ * percentage makes GitHub read the two characters after it as a hex code and
+ * swallow them. A raw line break ends the command outright, spilling the rest
+ * of the message into the log as plain text that no annotation carries.
+ *
+ * `%` has to be replaced first. Replacing it last would rewrite the `%` of a
+ * `%0A` this function had just introduced, and the reader would see a literal
+ * `%250A` where the line break belonged.
+ */
+function escapeData(value: string): string {
+  return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+
+/**
+ * Escape a property value - the `file=...` half, which is stricter than data.
+ *
+ * Properties are comma-separated and the list ends at the next `::`, so a raw
+ * `,` or `:` inside a value redraws those boundaries. That is not a corner
+ * case: every absolute path on Windows carries a drive-letter colon, and
+ * `file=C:\docs\a.md` is enough for GitHub to mis-parse the command and drop
+ * the annotation - the entire report silently empty on a Windows runner, with
+ * the run still exiting 1 as if it had been posted.
+ */
+function escapeProperty(value: string): string {
+  return escapeData(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
+}
+
+/**
+ * GitHub workflow commands: one `::error` annotation per finding.
+ *
+ * Line breaks are escaped rather than collapsed to spaces, as this once did.
+ * `%0A` is the format's own answer and GitHub renders it as a multi-line
+ * annotation, so the message arrives whole; collapsing threw away the author's
+ * line breaks to solve a problem the escape already solves, and its `\r?\n`
+ * pattern let a bare carriage return through into the command untouched.
  */
 export function renderGithub(run: LintRun): string {
   const lines: string[] = [];
   for (const result of run.results) {
     for (const finding of result.findings) {
       const params = [
-        `file=${result.file}`,
+        `file=${escapeProperty(result.file)}`,
         `line=${finding.position.start.line}`,
         `col=${finding.position.start.column}`,
       ];
-      const message = `[${finding.type}] ${describeFinding(finding)}`.replace(
-        /\r?\n/g,
-        " ",
+      const message = escapeData(
+        `[${finding.type}] ${describeFinding(finding)}`,
       );
       lines.push(`::error ${params.join(",")}::${message}`);
     }
@@ -179,7 +223,7 @@ export function render(
     case "github":
       return renderGithub(run);
     case "sarif":
-      return renderSarif(run);
+      return renderSarif(run, opts.root === undefined ? {} : { root: opts.root });
     case "explain":
       return renderExplain(run, opts);
     case "pretty":

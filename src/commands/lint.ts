@@ -440,9 +440,15 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
   }
 
   for (const file of files) {
-    const content = await readFile(resolve(cwd, file), "utf8");
     const ext = extname(file);
     const parser = forcedParser ?? parserForExtension(ext);
+    // The parser is chosen before the read, not after, because a file nothing
+    // can parse must not depend on being readable to be reported. Reading
+    // first pulls every skipped file into memory for nothing, and an
+    // unreadable one - a denied permission, a file a doc build moved mid-run -
+    // throws out of this loop, so a `.xyz` nobody asked us to parse takes the
+    // whole run down with it: exit 2 and no verdict for any of the pages after
+    // it, instead of one skip line and a report.
     if (!parser) {
       results.push(
         skip(
@@ -452,6 +458,7 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
       );
       continue;
     }
+    const content = await readFile(resolve(cwd, file), "utf8");
     results.push(await lintOne(file, content, parser, ctx));
   }
 

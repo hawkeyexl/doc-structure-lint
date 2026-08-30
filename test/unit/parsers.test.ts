@@ -148,6 +148,18 @@ describe("markdown parser", () => {
       expect(parse('---\ntitle: ""\n---\n\n## A\n').sections[0]!.level).toBe(2);
     });
 
+    // A blank title is as absent as no title. Admitting it gave the document a
+    // top-level section with an empty heading, which every template then
+    // reported as the wrong title while naming nothing to search for.
+    it("ignores a title that is only whitespace", () => {
+      expect(parse('---\ntitle: "   "\n---\n\n## A\n').sections[0]!.level).toBe(2);
+    });
+
+    it("trims the title it does use", () => {
+      const tree = parse('---\ntitle: "  Install the widget  "\n---\n\n## A\n');
+      expect(tree.sections[0]!.title).toBe("Install the widget");
+    });
+
     it("takes the content before the first heading with it", () => {
       const tree = parse("---\ntitle: A\n---\n\nLead prose.\n\n## Overview\n");
       const root = tree.sections[0]!;
