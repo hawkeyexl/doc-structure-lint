@@ -19,6 +19,17 @@ import pkg from "../../package.json" with { type: "json" };
 const SARIF_VERSION = "2.1.0";
 const SARIF_SCHEMA =
   "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
+/**
+ * Where code scanning sends someone who clicks "more information" on an alert.
+ *
+ * Deliberately the post-rename URL, which 404s until `doc-structure-lint` is
+ * renamed on GitHub - a manual step outside this repo. Pointing it at the
+ * current name instead would mean every SARIF report published from the day of
+ * the rename onward links somewhere that has moved, and reports outlive the
+ * rename; a link that is briefly wrong beats one that is permanently wrong.
+ * `package.json`'s `repository` and `bugs` URLs are forward-looking for the
+ * same reason, so all three flip together or not at all.
+ */
 const INFORMATION_URI = "https://github.com/hawkeyexl/moose-lint";
 
 /** The base every relative artifact URI in this report resolves against. */
