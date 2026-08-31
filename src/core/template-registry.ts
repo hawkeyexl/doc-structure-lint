@@ -502,6 +502,19 @@ export async function loadTemplate(
   const { kind } = classifyRef(base);
 
   if (kind === "builtin") {
+    // A fragment here was silently dropped, so `tgdp:how-to:1.6#typo` loaded
+    // `tgdp:how-to:1.6` and succeeded - the same quiet-wrong-answer as the
+    // prototype lookup below, where a configuration error selects a different
+    // template than the author wrote and nothing says so. A built-in id names
+    // exactly one template, so there is nothing a fragment could select.
+    if (fragment !== null) {
+      throw new MooseLintError(
+        `"${ref}" adds a "#${fragment}" fragment to a built-in template id. ` +
+          `A built-in id names one template on its own - drop the fragment and ` +
+          `use "${base}". Fragments name a template inside a file, as in ` +
+          `"./templates.yaml#how-to".`,
+      );
+    }
     if (!BUILTINS.has(base)) {
       const available = [...BUILTINS.keys()].join(", ");
       throw new MooseLintError(

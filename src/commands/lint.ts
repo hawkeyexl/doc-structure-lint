@@ -53,8 +53,11 @@ export interface LintOptions {
   template?: string;
   /**
    * `--templates`: template files whose `types:` join the routing table. A bare
-   * `--template <name>` is resolved as a name inside the first of them, which is
-   * the pairing the moose-docevals adapter invokes.
+   * `--template <name>` is resolved as a name inside the *last* of them, which
+   * is the pairing the moose-docevals adapter invokes. Last, not first, to
+   * agree with `buildTypeIndex`: a later file overrides an earlier one there,
+   * so resolving a bare name against the first would make one name mean two
+   * different templates depending on how it was written.
    */
   templates?: string | string[];
   /** `--as`: force an input format, by parser name. */
@@ -550,11 +553,31 @@ export async function runLint(opts: LintOptions): Promise<LintRun> {
   //
   // `--explain` is exempt: showing why nothing routed is exactly its job.
   if (!ctx.explain && checked === 0 && skipped > 0) {
+    // The advice has to follow the cause. The guard fires on any skip, but it
+    // used to describe routing only - so a run over files no parser claims was
+    // told to add a `type:` key, which changes nothing about an extension the
+    // tool cannot read. Advice the reader cannot act on is only half a guard.
+    const unrouted = results.filter((r) => r.skipped === "no-template").length;
+    const unsupported = results.filter(
+      (r) => r.skipped === "unsupported-format",
+    ).length;
+    const advice = [
+      unrouted > 0
+        ? `${unrouted} had no template: give a page a "type:" that a template ` +
+          `serves, pass -t/--template <ref>, or set "lint.template" as a default.`
+        : null,
+      unsupported > 0
+        ? `${unsupported} had no parser for their format: pass --as <format> to ` +
+          `force one, or target files in a format "moose-lint formats" lists as ` +
+          `implemented.`
+        : null,
+    ]
+      .filter((line): line is string => line !== null)
+      .join(" ");
+
     throw new MooseLintError(
-      `Nothing was checked: all ${skipped} file(s) were skipped. ` +
-        `Give a page a "type:" that a template serves, pass -t/--template <ref>, ` +
-        `or set "lint.template" as a default. Run "moose-lint <paths> --explain" ` +
-        `to see how each file resolved.`,
+      `Nothing was checked: all ${skipped} file(s) were skipped. ${advice} ` +
+        `Run "moose-lint <paths> --explain" to see how each file resolved.`,
     );
   }
 

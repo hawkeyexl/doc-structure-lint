@@ -112,6 +112,21 @@ describe("built-ins", () => {
     const message = await rejectionMessage(loadTemplateFile("tgdp:how-to:1.6"));
     expect(message).toContain("built-in template id, not a template file");
   });
+
+  // The fragment was stripped and then ignored, so this loaded the built-in
+  // and succeeded - a configuration error silently selecting a different
+  // reference than the author wrote, which is the failure the `Object.hasOwn`
+  // guard below exists to prevent one ref-kind over.
+  it("rejects a fragment on a built-in id rather than ignoring it", async () => {
+    const message = await rejectionMessage(loadTemplate("tgdp:how-to:1.6#typo"));
+    expect(message).toContain("#typo");
+    expect(message).toContain("tgdp:how-to:1.6");
+  });
+
+  it("still loads the same id without a fragment", async () => {
+    const template = await loadTemplate("tgdp:how-to:1.6");
+    expect(template.sections).toBeDefined();
+  });
 });
 
 describe("loadTemplateFile", () => {

@@ -569,25 +569,11 @@ class Flattener {
         ordered,
         items: [...elementChildren(el)]
           .filter((item) => this.c.items.has(localName(item)))
-          .map((item): ListItemNode => {
-            const itemPosition = this.span(item);
-            const itemText = flatten(item.textContent);
-            const children = this.contentChildren(item);
-            // An item whose text is not wrapped in a mapped element gets a
-            // synthesized paragraph. mdast puts a list item's principal text in
-            // a paragraph child, and `lists: {items: {paragraphs: {min: 1}}}`
-            // has to count the same thing in every format - a DITA `<li>bare
-            // text</li>` otherwise had no children where its Markdown twin had
-            // one.
-            if (children.length === 0 && itemText.length > 0) {
-              children.push({
-                kind: "paragraph",
-                position: itemPosition,
-                text: itemText,
-              });
-            }
-            return { position: itemPosition, text: itemText, children };
-          }),
+          .map((item): ListItemNode => ({
+            position: this.span(item),
+            text: flatten(item.textContent),
+            children: this.itemChildren(item),
+          })),
       };
     }
 
@@ -599,6 +585,59 @@ class Flattener {
    * rules can run. Transparent wrappers are walked through here too; anything
    * else unmapped is skipped, subtree included.
    */
+  /**
+   * One list item's content, with the item's own prose kept as a paragraph.
+   *
+   * mdast puts a list item's principal text in a `paragraph` child regardless
+   * of markup, and `lists: {items: {paragraphs: {min: 1}}}` has to count the
+   * same thing in every format. So the loose text is gathered into one, in the
+   * position it occupies among the item's blocks.
+   *
+   * Gathering it rather than checking whether the item has any children is what
+   * makes the two cases agree. `<li>bare text</li>` was already reconciled;
+   * `<li>Parent<ul>…</ul></li>` was not, because the nested list is a child, so
+   * the item looked accounted for and `Parent` became prose nothing counted -
+   * while its Markdown, HTML, AsciiDoc, and reST twins all counted one. This is
+   * the same fix `html.ts` carries, and the two should stay in step.
+   *
+   * Unmapped elements contribute their text rather than being skipped, which is
+   * what the old whole-item `textContent` did: inside an item they are inline
+   * markup - DITA's `<b>`, `<xref>` - not structure worth dropping.
+   */
+  private itemChildren(item: XmlElement): ContentNode[] {
+    const out: ContentNode[] = [];
+    let text = "";
+
+    const flush = (): void => {
+      const value = flatten(text);
+      text = "";
+      if (value.length === 0) return;
+      out.push({ kind: "paragraph", position: this.span(item), text: value });
+    };
+
+    for (let child = item.firstChild; child; child = child.nextSibling) {
+      if (child.nodeType !== ELEMENT_NODE) {
+        text += child.nodeValue ?? "";
+        continue;
+      }
+
+      const el = child as XmlElement;
+      const nested = this.c.transparent.has(localName(el))
+        ? this.contentChildren(el)
+        : [this.content(el)].filter((n): n is ContentNode => n !== null);
+
+      if (nested.length > 0) {
+        flush();
+        out.push(...nested);
+        continue;
+      }
+      text += el.textContent ?? "";
+    }
+
+    flush();
+    return out;
+  }
+
   private contentChildren(el: XmlElement): ContentNode[] {
     const out: ContentNode[] = [];
     for (const child of elementChildren(el)) {

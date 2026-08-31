@@ -129,6 +129,33 @@ describe("a run that checks nothing", () => {
       /Nothing was checked/,
     );
   });
+
+  // The guard fires on any skip but described routing only, so a run over a
+  // format no parser claims was told to add a `type:` key - advice that cannot
+  // change the outcome, since the tool could not read the file either way.
+  it("names the cause it actually hit, not just routing", async () => {
+    const unsupported = await file("notes.xyz", "whatever\n");
+
+    const message = await runLint({ inputs: [unsupported], cwd: dir }).then(
+      () => "resolved",
+      (err: Error) => err.message,
+    );
+
+    expect(message).toContain("Nothing was checked");
+    expect(message).toContain("--as");
+    expect(message).not.toContain('"type:"');
+  });
+
+  it("still gives routing advice when that is the cause", async () => {
+    await file("a.md", "# No type\n");
+    const message = await runLint({ inputs: [dir], cwd: dir }).then(
+      () => "resolved",
+      (err: Error) => err.message,
+    );
+
+    expect(message).toContain('"type:"');
+    expect(message).not.toContain("--as");
+  });
 });
 
 describe("a broken template is contained, not fatal", () => {
@@ -291,8 +318,45 @@ describe("a bare list item counts the same in every format", () => {
       "a.html",
     );
 
+    // XML had the same defect, found only after the HTML one was fixed - the
+    // two parsers reconciled the bare item separately and both stopped there.
+    const xml = xmlParser.parse(
+      '<topic id="t"><title>T</title><body><section><title>Steps</title>' +
+        "<ul><li>Parent<ul><li>nested</li></ul></li></ul></section></body></topic>",
+      "a.dita",
+    );
+
     expect(paragraphsOfFirstItem(md)).toBe(1);
     expect(paragraphsOfFirstItem(html)).toBe(paragraphsOfFirstItem(md));
+    expect(paragraphsOfFirstItem(xml)).toBe(paragraphsOfFirstItem(md));
+  });
+
+  // The trap in the obvious fix: the item's flattened text includes the nested
+  // list's, so pushing it wholesale would count "nested" as the parent's prose.
+  it("does not fold a nested item's text into the parent's paragraph", () => {
+    const parentProse = (tree: DocumentTree): string => {
+      const list = tree.sections[0]!.sections[0]!.content.find(
+        (c) => c.kind === "list",
+      );
+      const item = (list as { items: ListItemNode[] }).items[0]!;
+      const paragraph = item.children.find((c) => c.kind === "paragraph");
+      return (paragraph as { text: string }).text;
+    };
+
+    for (const tree of [
+      markdownParser.parse("# T\n\n## Steps\n\n- Parent\n  - nested\n", "a.md"),
+      htmlParser.parse(
+        "<html><body><h1>T</h1><h2>Steps</h2><ul><li>Parent<ul><li>nested</li></ul></li></ul></body></html>",
+        "a.html",
+      ),
+      xmlParser.parse(
+        '<topic id="t"><title>T</title><body><section><title>Steps</title>' +
+          "<ul><li>Parent<ul><li>nested</li></ul></li></ul></section></body></topic>",
+        "a.dita",
+      ),
+    ]) {
+      expect(parentProse(tree), tree.format).toBe("Parent");
+    }
   });
 
   it("agrees across markdown, html, xml, asciidoc, and rst", () => {
