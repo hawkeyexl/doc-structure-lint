@@ -564,7 +564,7 @@ Call `loadConfig()` yourself if you want the file.
 | --- | --- |
 | `pretty` | reading. The default. |
 | `json` | tool adapters: `[{ file, success, errors: [{ type, heading, message, position }] }]` |
-| `github` | `::error file=…,line=…,col=…::` annotations, inline on a pull request |
+| `github` | GitHub workflow commands (`::error file=…,line=…,col=…::`), inline on a pull request |
 | `sarif` | code-scanning uploads — SARIF 2.1.0, one rule descriptor per finding type |
 
 The SARIF output declares every finding type in `tool.driver.rules` and

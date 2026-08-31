@@ -391,6 +391,28 @@ describe("renderSarif URIs", () => {
     });
   });
 
+  it("matches a UNC root case-insensitively too, since a share is a Windows path", () => {
+    // A checkout on a network share is the case a drive-letter test cannot
+    // reach. Missing it emits an absolute `file:` URI, and an alert carrying
+    // one attaches to no file in the repository - silently, on upload.
+    expect(
+      uriOf("\\\\SERVER\\SHARE\\docs\\guide.md", "\\\\server\\share"),
+    ).toEqual({
+      uri: "docs/guide.md",
+      uriBaseId: "SRCROOT",
+    });
+  });
+
+  it("still refuses to case-fold a posix root, where casing distinguishes files", () => {
+    // The folding is a concession to Windows, not a general relaxation: on a
+    // case-sensitive filesystem `/repo` and `/REPO` are two directories, and
+    // relativizing one against the other would point the alert at the wrong
+    // file rather than at none.
+    expect(uriOf("/REPO/docs/guide.md", "/repo")).toEqual({
+      uri: "file:///REPO/docs/guide.md",
+    });
+  });
+
   it("passes an already-relative posix path straight through", () => {
     expect(uriOf("docs/guide.md")).toEqual({
       uri: "docs/guide.md",
@@ -416,6 +438,16 @@ describe("renderSarif URIs", () => {
   it("does not mistake a sibling directory with a shared prefix for a child", () => {
     expect(uriOf("C:\\repository\\stray.md")).toEqual({
       uri: "file:///C:/repository/stray.md",
+    });
+  });
+
+  it("keeps that sibling guard when the match is the case-folded one", () => {
+    // The trailing slash `normalizeRoot` appends is what stops `share` from
+    // swallowing `shareholder`; comparing case-folded must not step around it.
+    expect(
+      uriOf("\\\\SERVER\\SHAREHOLDER\\stray.md", "\\\\server\\share"),
+    ).toEqual({
+      uri: "file://SERVER/SHAREHOLDER/stray.md",
     });
   });
 

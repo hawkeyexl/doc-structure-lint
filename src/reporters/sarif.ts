@@ -156,13 +156,25 @@ function isAbsolutePath(posix: string): boolean {
   return posix.startsWith("/") || DRIVE.test(posix);
 }
 
+/**
+ * A path Windows resolves, and therefore compares without regard to case:
+ * either a drive path or a UNC share. `//` is how `fileUri` recognises a share
+ * too, so both places agree on what one looks like.
+ */
+function isWindowsPath(posix: string): boolean {
+  return DRIVE.test(posix) || posix.startsWith("//");
+}
+
 /** `/repo/` + `/repo/docs/a.md` -> `docs/a.md`; null when not underneath. */
 function underRoot(posix: string, root: string): string | null {
   if (posix.startsWith(root)) return posix.slice(root.length);
-  // Windows drive paths are case-insensitive: `C:/Repo` and `c:/repo` are one
-  // directory. Retry that way only when both sides are drive paths - anywhere
-  // else, two paths differing in case are two different files.
-  if (DRIVE.test(posix) && DRIVE.test(root)) {
+  // Windows paths are case-insensitive: `C:/Repo` and `c:/repo` are one
+  // directory, and so are `//server/Share` and `//SERVER/share` - a checkout on
+  // a network share must relativize as readily as one on a drive, or its
+  // findings upload as absolute URIs and attach to nothing. Retry this way only
+  // when both sides are Windows-shaped - anywhere else, two paths differing in
+  // case are two different files.
+  if (isWindowsPath(posix) && isWindowsPath(root)) {
     // The comparison case-folds but the slice does not, which reads like a bug
     // and is not: case folding leaves length unchanged, so `root.length` still
     // indexes the same boundary, and slicing the original is what keeps the

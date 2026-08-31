@@ -136,9 +136,16 @@ clean against the template derived from it.
   docset whose page titles live in frontmatter and whose bodies start at `##`
   matches none of them — and fails with a cascade of missing and unexpected
   sections rather than one legible finding. Sites are commonly built this way.
-  The escape (`extends` and replace the top-level rule) is not discoverable, and
-  a first-class "the title is in the frontmatter" affordance was considered and
-  deferred until the DSL has somewhere honest to put it.
+  The escape (`extends` and replace the top-level rule) is not discoverable.
+
+  *Resolved by [ADR 01006](01006-take-the-h1-from-frontmatter-when-the-body-has-none.md),
+  which was taken after this one.* A first-class affordance was deferred here
+  for want of somewhere honest to put it in the DSL; 01006's answer was that it
+  does not belong in the DSL at all, but in the parsers, which prepend a
+  synthetic H1 positioned on the metadata that carries the title. The built-ins
+  are unchanged — they still model the H1 as their top-level rule — and now
+  match these pages because the tree they are matched against is the document as
+  a reader sees it rendered.
 - Bad, because seven derived artifacts are seven files to re-derive whenever the
   pin moves, and the round-trip test says *that* one broke, not what to change
   in it.
