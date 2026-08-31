@@ -339,10 +339,12 @@ async function lintOne(
 
   // A page may not send the linter to a URL of its own choosing.
   //
-  // Every other stage of the chain is operator input - a flag, a config file, a
-  // template file the operator passed. `$template` is the one that comes out of
-  // the document, and documents are exactly what this tool is pointed at
-  // untrusted: a docset from a fork, a contributor's branch, a vendored copy.
+  // `type` comes out of the document too, but it only *selects* from the
+  // routing table the operator assembled - a page can ask for a template on
+  // offer, not introduce one. `$template` names a reference directly, which
+  // makes it the one stage where a document says where a template comes from,
+  // and documents are exactly what this tool is pointed at untrusted: a docset
+  // from a fork, a contributor's branch, a vendored copy.
   // Left open, one line of frontmatter makes the linting host issue an
   // arbitrary request, which on CI means from inside the build network. The
   // `$ref` hole this mirrors was closed in the template loader; this is the
