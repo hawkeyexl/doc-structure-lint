@@ -1,14 +1,33 @@
-doc-structure-lint: 0.0.1
 info:
   title: Sample Templates
   version: 1.0.0
 
 templates: # Array of templates, each with a unique key
+  # Declaring `types:` is all it takes to route pages by their frontmatter: any
+  # page with `type: api-operation` is checked against this template, with no
+  # config entry and no flag. A user template also outranks a built-in serving
+  # the same doctype, which is how you override one for a repo.
+  api-operation-guide:
+    types: [api-operation]
+    $ref: "#/templates/api-operation"
+
+  # Start from a vetted built-in and disagree with it in one place, rather than
+  # copying it and drifting. TGDP does not mark "See also" optional, so
+  # `tgdp:how-to:1.6` requires it; plenty of real how-tos have none. `extends`
+  # merges through `sections` recursively, so everything else the built-in says
+  # - Overview, Before you start, the repeating task sections - is inherited.
+  house-how-to:
+    types: [how-to]
+    extends: tgdp:how-to:1.6
+    sections:
+      title:
+        sections:
+          see also:
+            required: false
+
   how-to:
     sections:
       title:
-        instructions:
-          - Must mention the intent of the document
         paragraphs:
           min: 1
         sections:
@@ -68,8 +87,6 @@ templates: # Array of templates, each with a unique key
     sections: # Array of sections, each with a unique key
       Introduction: # Each sections corresponds to a heading level one below the parent, starting with an H1 at the first level
         description: A template for how-to guides that include prerequisites, setup, usage, troubleshooting, and next steps sections.
-        instructions: # Instructions for the author to follow when using the template. Evaluated against content by a local language model.
-          - Mention the intent of the guide
         sequence:
           - paragraphs:
               min: 2

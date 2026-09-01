@@ -1,0 +1,223 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "moose-lint:template:1",
+  "title": "moose-lint template file",
+  "description": "A template file: named doctype templates, plus the reusable fragments they point at with `$ref`. Validated after dereferencing, so no `$ref` survives to be seen here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["templates"],
+  "properties": {
+    "info": {
+      "description": "Free-form metadata about the file (title, version, author). Never read by the linter; declared so a file that carries it is not rejected.",
+      "type": "object"
+    },
+    "templates": {
+      "description": "The doctype templates this file defines, keyed by name.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z0-9-_]+$": { "$ref": "#/definitions/template" }
+      }
+    },
+    "components": {
+      "description": "Reusable fragments, targeted by `$ref` from elsewhere in the file. Left unconstrained: a fragment is validated where it is inlined, not where it is declared.",
+      "type": "object"
+    }
+  },
+  "definitions": {
+    "template": {
+      "description": "One doctype template: the section rules a document of that type must satisfy.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "description": "Doctypes this template serves, matched against a page's `type` frontmatter.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "extends": {
+          "description": "Template reference (built-in id, path, or URL, optionally with a `#name` fragment) whose rules this template inherits.",
+          "type": "string",
+          "minLength": 1
+        },
+        "additionalSections": {
+          "description": "Allow top-level document sections this template does not describe.",
+          "type": "boolean"
+        },
+        "sections": {
+          "$ref": "#/definitions/sections"
+        }
+      }
+    },
+    "sections": {
+      "description": "Section rules keyed by name, in document order. Each key describes one heading a level below its parent. A name may not consist only of digits: JavaScript enumerates integer-like object keys first, in ascending numeric order, so an all-digit name would silently reorder the rules relative to how the template declares them - and declared order is most of what a section rule asserts. Prefix such a name (`v2024`, `step-1`).",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(?![0-9]+$)[A-Za-z0-9-_ ]+$": { "$ref": "#/definitions/section" }
+      }
+    },
+    "section": {
+      "description": "A section of a document, demarcated by a heading.",
+      "type": "object",
+      "additionalProperties": false,
+      "not": {
+        "description": "`instructions` was the language-model hook of doc-structure-lint. moose-lint is deterministic and has no model, so a template carrying it is rejected outright rather than silently ignored; the loader turns this into a migration message pointing at moose-docevals.",
+        "required": ["instructions"]
+      },
+      "properties": {
+        "description": {
+          "description": "Prose description of the section's purpose. Not validated against.",
+          "type": "string"
+        },
+        "heading": {
+          "$ref": "#/definitions/heading"
+        },
+        "required": {
+          "description": "Whether the section must be present. Absent means required. Deliberately carries no JSON Schema `default`: Ajv's `useDefaults` would write one into every section at load time, and those written-in values then win the `extends` merge, so a child that tightens one nested rule would silently reset its parent's `required: false`. The code reads `undefined` as required.",
+          "type": "boolean"
+        },
+        "repeat": {
+          "description": "Whether this rule may claim more than one section. On a rule that constrains its heading, it claims the run of consecutive sections whose headings satisfy it - how a doctype says \"one or more sections named `Symptom N`\". On a slot (a rule constraining neither `heading.const` nor `heading.pattern`) it claims every section up to the next anchored rule that could claim one. Without it either kind claims exactly one, so two adjacent slots each get their own section. Absent means false; see `required` for why no `default` is declared.",
+          "type": "boolean"
+        },
+        "sequence": {
+          "description": "Ordered runs of content the section must contain.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/sequence_item" }
+        },
+        "paragraphs": {
+          "$ref": "#/definitions/paragraphs"
+        },
+        "code_blocks": {
+          "$ref": "#/definitions/code_blocks"
+        },
+        "lists": {
+          "$ref": "#/definitions/lists"
+        },
+        "additionalSections": {
+          "description": "Allow subsections this template does not describe. Absent means false; see `required` for why no `default` is declared.",
+          "type": "boolean"
+        },
+        "sections": {
+          "$ref": "#/definitions/sections"
+        }
+      }
+    },
+    "heading": {
+      "description": "Heading rules. A section that constrains neither `const` nor `pattern` is a slot: it matches any heading.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "const": {
+          "description": "Exact heading text of the section.",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "Regular expression the heading must match.",
+          "type": "string"
+        }
+      }
+    },
+    "paragraphs": {
+      "description": "Paragraph requirements.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "description": "Minimum number of paragraphs.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "description": "Maximum number of paragraphs.",
+          "type": "integer"
+        },
+        "patterns": {
+          "description": "Regular expressions applied to paragraphs in order, cycled when exhausted.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "code_blocks": {
+      "description": "Code block requirements.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "description": "Minimum number of code blocks.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "description": "Maximum number of code blocks.",
+          "type": "integer"
+        }
+      }
+    },
+    "lists": {
+      "description": "List requirements.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "description": "Minimum number of lists.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "description": "Maximum number of lists.",
+          "type": "integer"
+        },
+        "items": {
+          "description": "Requirements applied to every item of every list. Recurses arbitrarily deep.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "description": "Minimum number of items in a list.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "description": "Maximum number of items in a list.",
+              "type": "integer"
+            },
+            "paragraphs": { "$ref": "#/definitions/paragraphs" },
+            "code_blocks": { "$ref": "#/definitions/code_blocks" },
+            "lists": { "$ref": "#/definitions/lists" }
+          }
+        }
+      }
+    },
+    "sequence_item": {
+      "description": "One run of a `sequence`. Exactly one key is set; it names the content kind expected at that position.",
+      "type": "object",
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "paragraphs": { "$ref": "#/definitions/paragraphs" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "code_blocks": { "$ref": "#/definitions/code_blocks" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "lists": { "$ref": "#/definitions/lists" }
+          }
+        }
+      ]
+    }
+  }
+}

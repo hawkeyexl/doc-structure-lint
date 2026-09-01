@@ -1,45 +1,107 @@
 {
-  "name": "doc-structure-lint",
-  "version": "0.0.5",
-  "description": "A tool to validate Markdown and AsciiDoc structure against a specified template",
-  "bin": {
-    "doc-structure-lint": "src/index.js"
-  },
-  "main": "src/index.js",
-  "scripts": {
-    "postinstall": "node src/util/preloadModel.js",
-    "clean": "node src/util/tempDir.js clean",
-    "start": "node src/index.js",
-    "test": "mocha 'src/**/*.test.js'",
-    "prepare": "husky"
-  },
-  "author": "Manny Silva",
-  "license": "MIT",
+  "name": "moose-lint",
+  "version": "0.0.0-development",
+  "description": "Validate document structure against doctype templates, routed by a page's `type` frontmatter. Deterministic, CI-friendly.",
   "type": "module",
-  "dependencies": {
-    "@apidevtools/json-schema-ref-parser": "^11.7.3",
-    "ajv": "^8.17.1",
-    "asciidoctor": "^3.0.4",
-    "axios": "^1.7.9",
-    "crypto": "^1.0.1",
-    "node-llama-cpp": "^3.3.1",
-    "remark": "^15.0.1",
-    "remark-frontmatter": "^5.0.0",
-    "uuid": "^11.0.3",
-    "yaml": "^2.6.1",
-    "yargs": "^17.7.2"
+  "bin": {
+    "moose-lint": "dist/cli.js"
   },
-  "devDependencies": {
-    "chai": "^5.1.2",
-    "husky": "^9.1.7",
-    "mocha": "^11.0.1",
-    "sinon": "^19.0.2"
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "index.js",
-    "src/**/*.js"
+    "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hawkeyexl/moose-lint.git"
+  },
+  "homepage": "https://hawkeyexl.github.io/moose-lint/",
+  "bugs": {
+    "url": "https://github.com/hawkeyexl/moose-lint/issues"
+  },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "commitlint": "commitlint --edit",
+    "semantic-release": "semantic-release",
+    "prepare": "husky",
+    "prepublishOnly": "npm run build",
+    "smoke": "npm run build && node scripts/smoke.mjs",
+    "check:tgdp-pin": "node scripts/check-tgdp-pin.mjs"
+  },
+  "keywords": [
+    "documentation",
+    "linter",
+    "structure",
+    "markdown",
+    "template",
+    "diataxis",
+    "tgdp",
+    "frontmatter",
+    "cli",
+    "ci"
+  ],
+  "author": "Manny Silva",
+  "license": "MIT",
+  "overrides": {
+    "esbuild": "^0.28.1"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^11.7.3",
+    "@xmldom/xmldom": "^0.9.12",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "asciidoctor": "^3.0.4",
+    "commander": "^15.0.0",
+    "docmeta": "^4.12.0",
+    "fast-glob": "^3.3.2",
+    "github-slugger": "^2.0.0",
+    "mdast-util-to-string": "^4.0.0",
+    "parse5": "^8.0.1",
+    "picocolors": "^1.1.1",
+    "picomatch": "^4.0.4",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-mdx": "^3.1.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.0",
+    "unist-util-visit": "^5.1.0",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.8",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^26.0.1",
+    "@types/picomatch": "^4.0.3",
+    "@types/unist": "^3.0.3",
+    "husky": "^9.1.7",
+    "semantic-release": "^25.0.3",
+    "tsup": "^8.3.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

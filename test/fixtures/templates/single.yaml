@@ -1,0 +1,16 @@
+# One template, so a ref with no `#` fragment resolves unambiguously.
+info:
+  title: Single template fixture
+templates:
+  how-to:
+    types: [how-to]
+    sections:
+      overview:
+        heading:
+          const: Overview
+        paragraphs:
+          min: 1
+      before you start:
+        required: false
+        heading:
+          const: Before you start

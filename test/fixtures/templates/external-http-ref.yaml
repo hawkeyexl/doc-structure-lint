@@ -1,0 +1,8 @@
+# A `$ref` at an http URL. Resolving it would make the linting host fetch
+# whatever host the template names - the outbound half of the SSRF.
+templates:
+  how-to:
+    types: [how-to]
+    sections:
+      overview:
+        $ref: "https://example.invalid/sections.yaml#/overview"

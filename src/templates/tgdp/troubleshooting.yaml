@@ -1,0 +1,89 @@
+# Troubleshooting, derived from The Good Docs Project's troubleshooting
+# template at release v1.6.0 ("Iron"):
+#
+#   https://gitlab.com/tgdp/templates/-/blob/v1.6.0/troubleshooting/template_troubleshooting.md
+#
+# The upstream file is vendored at test/fixtures/tgdp/template_troubleshooting.md
+# and linted against this template, so the two cannot drift.
+#
+# The doctype is a list of symptoms, each explained by one or more causes and
+# the solution or workaround for each. Upstream numbers every heading -
+# `## Symptom 1`, `### Cause 2 of symptom 1` - but the numbering is
+# illustrative, so the patterns here anchor on the leading word only: a page
+# with one symptom, a page with five, and a page whose headings read
+# `Symptom: disk full` or `Workaround` all pass. `repeat: true` on an anchored
+# rule claims the whole run of consecutive sections whose headings satisfy it,
+# which is what lets the heading text be checked and repeated at once.
+#
+# Causes and solutions alternate rather than arriving in two blocks - upstream
+# runs cause, solution, cause - and the DSL cannot repeat a *pair* of rules, so
+# the two are one rule matching either word. That is the only place the shape
+# is looser than the doctype.
+info:
+  title: Troubleshooting (The Good Docs Project)
+  version: "1.6.0"
+  source: https://gitlab.com/tgdp/templates/-/blob/v1.6.0/troubleshooting/template_troubleshooting.md
+
+templates:
+  troubleshooting:
+    types:
+      - troubleshooting
+    sections:
+      title:
+        description: >-
+          The page itself (H1). Upstream titles it
+          `# Troubleshooting {product name, feature, or task}`, a placeholder,
+          so the text is left free. What the doctype does ask for is underneath
+          it: the one- or two-sentence statement of what the guide covers,
+          which is how a reader decides in seconds whether they are in the
+          right document.
+        paragraphs:
+          min: 1
+        sections:
+          symptom:
+            description: >-
+              One thing the reader might be seeing - an error message, a
+              failure, a performance problem. Repeats: every consecutive H2
+              whose title starts with "Symptom" is one. The number upstream
+              attaches (`## Symptom 1`) is not required, so
+              `## Symptom: sync stalls` is equally acceptable.
+            heading:
+              pattern: '^[Ss]ymptoms?\b'
+            repeat: true
+            sections:
+              cause or solution:
+                description: >-
+                  A cause of the symptom, or the solution or workaround for
+                  one. Upstream alternates them - `### Cause 1 of symptom 1`,
+                  `### Solution or workaround to cause 1 of symptom 1`,
+                  `### Cause 2 of symptom 1` - so this is one repeating rule
+                  matching either word rather than a cause rule followed by a
+                  solution rule, which would only fit a page that grouped all
+                  its causes before all its solutions. At least one is
+                  required: a symptom with neither is not a troubleshooting
+                  entry. Content is left unconstrained, because the guide
+                  recommends bullet points for symptoms and numbered steps for
+                  solutions, so a section here may legitimately hold no
+                  paragraph at all.
+                heading:
+                  pattern: '^([Cc]auses?|[Ss]olutions?|[Ww]orkarounds?)\b'
+                repeat: true
+              for more information:
+                description: >-
+                  Further reading for this symptom. Optional, and anchored, so
+                  the repeating rule above stops at it rather than treating it
+                  as one more cause.
+                heading:
+                  const: For more information
+                required: false
+          for more information:
+            description: >-
+              Further reading for the guide as a whole. Upstream writes this
+              heading at H3, inside the last symptom, which reads like a level
+              slip - its text ("other sources ... with your product, task, or
+              feature") is about the product, not about one symptom. Rather
+              than pick a side, the section is allowed, and optional, at both
+              levels.
+            heading:
+              const: For more information
+            required: false

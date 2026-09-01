@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    // Built-in JSON schemas (and package.json, for --version) are pulled in with
+    // `import x from "./y.json" with { type: "json" }`. NodeNext + this flag is
+    // what makes those import attributes type-check.
+    "resolveJsonModule": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "verbatimModuleSyntax": false,
+    // TODO: remove once tsup stops injecting the deprecated `baseUrl` during
+    // its DTS bundle pass. This silences TS 6.0-promoted deprecations
+    // project-wide, so re-check the build emits no other deprecation warnings
+    // when dropping it.
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src", "test"]
+}

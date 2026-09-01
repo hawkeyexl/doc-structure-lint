@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "moose-lint:config:1",
+  "title": "moose-lint config section",
+  "description": "The `lint:` section of a shared `moose.config.yaml`. The file's root is a mapping of tool name to that tool's settings, so this schema describes the section only - never the file. Every key is optional: a repo that configures no moose-lint at all is a legitimate config, and so is one that carries only a sibling tool's section. `additionalProperties: false` applies at every level below `lint:`, which is what turns a typo'd key into a loud failure instead of a silent default.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "paths": {
+      "description": "Files, directories, or globs to lint when the command line names none. A bare `moose-lint` in CI lints these.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "exclude": {
+      "description": "Globs removed from directory/glob expansion, added to the built-in `node_modules`/`.git` defaults rather than replacing them.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "templates": {
+      "description": "Template files to load. Their templates' `types:` join the doctype routing table, outranking the built-ins, so adopting a repo's own how-to shape is one entry here and no flag.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "template": {
+      "description": "Template ref applied to a page that declares no doctype and matches no override. The last stage of the resolution chain, not an override: `--template`, a page's `$template`, an `overrides` entry, and the page's own `type` all outrank it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "types": {
+      "description": "Explicit doctype -> template ref map, for a doctype no template file claims with its own `types:`. Keys are the vocabulary a page's `type` frontmatter is written in, so they are the author's names rather than this schema's - constrained only to the shape a doctype slug takes, not to a fixed set.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z0-9._:-]+$": {
+          "description": "A template ref: a built-in id, a path, or a URL, optionally with a `#name` fragment.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "overrides": {
+      "description": "Repo policy: everything under a glob is linted with one template, whatever the pages say they are. First matching entry wins, and an override outranks a page's own `type`.",
+      "type": "array",
+      "items": {
+        "description": "One policy entry. Both keys are required: an entry naming no template, or no files, is a line that silently does nothing.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["files", "template"],
+        "properties": {
+          "files": {
+            "description": "Glob matched against each file's path, written with forward slashes whatever the platform uses.",
+            "type": "string",
+            "minLength": 1
+          },
+          "template": {
+            "description": "Template ref applied to the files this entry matches.",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

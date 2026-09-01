@@ -1,0 +1,57 @@
+{
+  "$comment": "Built-in doctype templates derived from The Good Docs Project templates, pinned to release v1.6.0 (\"Iron\"): https://gitlab.com/tgdp/templates/-/tree/v1.6.0. Each entry's `file` is a YAML template beside this manifest; `source` is the upstream Markdown it was derived from, vendored under test/fixtures/tgdp/ and linted against the derived template so the two cannot drift. Run `npm run check:tgdp-pin` to see whether upstream has moved past the pin.",
+  "vendor": "tgdp",
+  "upstream": "https://gitlab.com/tgdp/templates",
+  "pin": "v1.6.0",
+  "templates": [
+    {
+      "id": "tgdp:how-to:1.6",
+      "file": "tgdp/how-to.yaml",
+      "title": "How-to guide (The Good Docs Project)",
+      "types": ["how-to"],
+      "source": "how-to/template_how-to.md"
+    },
+    {
+      "id": "tgdp:tutorial:1.6",
+      "file": "tgdp/tutorial.yaml",
+      "title": "Tutorial (The Good Docs Project)",
+      "types": ["tutorial"],
+      "source": "tutorial/template_tutorial.md"
+    },
+    {
+      "id": "tgdp:reference:1.6",
+      "file": "tgdp/reference.yaml",
+      "title": "Reference (The Good Docs Project)",
+      "types": ["reference"],
+      "source": "reference/template_reference.md"
+    },
+    {
+      "id": "tgdp:concept:1.6",
+      "file": "tgdp/concept.yaml",
+      "title": "Concept (The Good Docs Project)",
+      "types": ["concept", "explanation"],
+      "source": "concept/template_concept.md"
+    },
+    {
+      "id": "tgdp:troubleshooting:1.6",
+      "file": "tgdp/troubleshooting.yaml",
+      "title": "Troubleshooting (The Good Docs Project)",
+      "types": ["troubleshooting"],
+      "source": "troubleshooting/template_troubleshooting.md"
+    },
+    {
+      "id": "tgdp:release-notes:1.6",
+      "file": "tgdp/release-notes.yaml",
+      "title": "Release notes (The Good Docs Project)",
+      "types": ["release-notes"],
+      "source": "release-notes/template_release-notes.md"
+    },
+    {
+      "id": "tgdp:readme:1.6",
+      "file": "tgdp/readme.yaml",
+      "title": "README (The Good Docs Project)",
+      "types": ["readme"],
+      "source": "readme/template_readme.md"
+    }
+  ]
+}
