@@ -1,8 +1,13 @@
 name: Vale
 
-# Prose lint against the Moose house voice (Voices + Direct). Advisory for
-# now: reviewdog annotates only the lines a PR adds, and errors do not fail
-# the check. Flip fail_on_error once the existing corpus is worked down.
+# Prose lint against the Moose house voice (Voices + Direct). This is a gate:
+# the corpus is clean, so reviewdog checks every file rather than only the
+# lines a pull request adds, and any alert fails the check. Checking the whole
+# corpus is what catches a change that breaks the voice in a file it did not
+# touch, such as an edit to `.vale.ini`.
+#
+# Test fixtures and sample artifacts are exempted in `.vale.ini`, not here, so
+# a local `vale .` and this job see the same files.
 on:
   pull_request:
     paths:
@@ -18,12 +23,18 @@ jobs:
   vale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The action runs `vale sync` for the package named in `.vale.ini`.
+      # An unsynced package is a hard Vale error rather than a silent pass,
+      # so a failure to fetch it cannot leave this job green over nothing.
       - uses: vale-cli/vale-action@v3
         with:
           version: 3.20.0
           reporter: github-pr-review
-          filter_mode: added
-          fail_on_error: false
+          filter_mode: nofilter
+          fail_on_error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
