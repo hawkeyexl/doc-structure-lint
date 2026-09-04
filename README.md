@@ -621,7 +621,7 @@ npm install
 npm test
 npm run typecheck
 npm run smoke            # build, then exercise the real dist/cli.js
-npm run lint:prose       # Vale, against the house voice (needs `vale` on PATH)
+npm run lint:prose       # the house voice (needs `vale` on PATH)
 npm run check:tgdp-pin   # has upstream moved past the built-ins' pin?
 ```
 

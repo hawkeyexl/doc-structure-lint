@@ -2,9 +2,13 @@ name: Vale
 
 # Prose lint against the Moose house voice (Voices + Direct). This is a gate:
 # the corpus is clean, so reviewdog checks every file rather than only the
-# lines a pull request adds, and any alert fails the check. Checking the whole
-# corpus is what catches a change that breaks the voice in a file it did not
-# touch, such as an edit to `.vale.ini`.
+# lines a pull request adds, and any alert at any severity fails the check.
+# Checking the whole corpus is what catches a change that breaks the voice in
+# a file it did not touch, such as an edit to `.vale.ini`.
+#
+# `fail_level: any` rather than `fail_on_error: true`: the latter maps to
+# reviewdog's `-fail-level=error`, which passes the one warning-level rule the
+# package ships (`Voices.ColonReveal`). `fail_level` takes precedence over it.
 #
 # Test fixtures and sample artifacts are exempted in `.vale.ini`, not here, so
 # a local `vale .` and this job see the same files.
@@ -13,11 +17,19 @@ on:
     paths:
       - "**.md"
       - "**.mdx"
+      # The package styles `*.{md,mdx,txt}`, so `.txt` is gated too.
+      - "**.txt"
       - ".vale.ini"
+      # So a change to the gate itself runs the gate.
+      - ".github/workflows/vale.yml"
 
 permissions:
   contents: read
   pull-requests: write
+
+concurrency:
+  group: vale-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   vale:
@@ -27,14 +39,23 @@ jobs:
         with:
           persist-credentials: false
 
-      # The action runs `vale sync` for the package named in `.vale.ini`.
-      # An unsynced package is a hard Vale error rather than a silent pass,
-      # so a failure to fetch it cannot leave this job green over nothing.
+      # The action runs `vale sync` and throws if the package cannot be
+      # fetched. That throw is the only thing standing between a failed fetch
+      # and a green run: every `BasedOnStyles` lives inside the package, so
+      # Vale with an empty StylesPath lints zero files and exits 0. Hence the
+      # canary below, and never `sync: false`.
       - uses: vale-cli/vale-action@v3
         with:
           version: 3.20.0
           reporter: github-pr-review
           filter_mode: nofilter
-          fail_on_error: true
+          fail_level: any
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Prove the rule set is actually live. If the package ever syncs without
+      # its config, the step above passes over zero rules; this fails instead.
+      - name: Assert the house voice is loaded
+        run: |
+          vale ls-config | grep -q '"Moose"' \
+            || { echo "::error::Vale loaded no Moose styles - the gate would pass over nothing"; exit 1; }

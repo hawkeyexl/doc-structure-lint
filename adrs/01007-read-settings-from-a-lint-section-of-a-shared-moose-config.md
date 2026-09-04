@@ -75,16 +75,16 @@ that silently re-includes `node_modules`, which is a trap.
 Four shapes are rejected rather than defaulted through, each because it silently
 discards an entire configuration:
 
-- **The un-nested config**: keys this tool owns at the top level with no `lint:`.
-  The stray keys are named, and the list is derived from the schema's own
-  `properties` so it cannot drift from the real key set.
+- **The un-nested config.** Keys this tool owns sit at the top level with no
+  `lint:`. The stray keys are named, and the list is derived from the schema's
+  own `properties` so it cannot drift from the real key set.
 - **The miscased wrapper.** A top-level key matches `lint` case-insensitively
   but not exactly. The stray-key check cannot see this one, because its keys are
   nested rather than at the top level.
-- **The un-renamed config**: a `doc-structure-lint.config.yaml` and no
+- **The un-renamed config.** There is a `doc-structure-lint.config.yaml` and no
   `moose.config.yaml`. The error names the new filename and the required key.
-- **An unreadable `moose.config.yaml`**: a directory by that name, a permissions
-  error. Only `ENOENT`/`ENOTDIR` counts as absent, and anything else is reported
+- **An unreadable `moose.config.yaml`.** A directory carries that name, or a
+  permissions error blocks it. Only `ENOENT`/`ENOTDIR` counts as absent, and anything else is reported
   rather than defaulted through. It must not reach the legacy check, which would
   otherwise blame a missing file for a permissions problem.
 

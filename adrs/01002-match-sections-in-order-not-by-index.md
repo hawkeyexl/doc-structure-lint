@@ -79,10 +79,13 @@ repository's own `Sample` has `Setup` followed by `Usage`. A greedy first slot
 consumed both, then reported `Usage` missing. `repeat` is therefore a new
 key rather than the default, and only genuinely repeated placeholders set it.
 
-**A lone mismatch stays a mismatch.** A required anchored rule may match nothing
-anywhere while the section at the cursor is wanted by no later rule. The rule is
-then paired with that section anyway, and the heading rule reports
-`Expected title "X", but found "Y"`. The commonest error in the tool's history is
+**A lone mismatch stays a mismatch.** The rule is paired with that section
+anyway when two things hold:
+
+- A required anchored rule matches nothing anywhere.
+- No later rule wants the section at the cursor.
+
+The heading rule then reports `Expected title "X", but found "Y"`. The commonest error in the tool's history is
 one section with one wrong heading. Without this it would have degraded into
 `missing_section` plus `unexpected_section`, leaving the reader to work out that
 they are the same problem.

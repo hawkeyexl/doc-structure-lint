@@ -58,9 +58,11 @@ looks for it.
 
 The chosen option is to **synthesize an H1 from the frontmatter `title`.**
 
-A page may carry a non-empty string `title` in its front matter while its body
-contains no level-1 heading. The parser then prepends a synthetic heading block
-before sectionizing. Everything downstream, including matching, rules, and
+The parser prepends a synthetic heading block before sectionizing when two
+things hold:
+
+- The page carries a non-empty string `title` in its front matter.
+- Its body contains no level-1 heading. Everything downstream, including matching, rules, and
 reporting, sees the document the way a reader sees it rendered. None of it needs
 any knowledge of this.
 

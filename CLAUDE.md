@@ -125,7 +125,7 @@ npm test                  # vitest
 npm run typecheck         # tsc --noEmit
 npm run build             # tsup -> dist/
 npm run smoke             # build, then exercise the real dist/cli.js
-npm run lint:prose        # vale sync, then vale over the repo's own prose
+npm run lint:prose        # the house voice, over this repo's own prose
 npm run check:tgdp-pin    # has upstream moved past the pinned TGDP release?
 ```
 
@@ -133,14 +133,24 @@ The pre-commit hook runs `typecheck` and `test`.
 
 ### Prose is linted too
 
-`npm run lint:prose` runs [Vale](https://vale.sh) against the house voice, and
-CI fails on any alert. It needs `vale` on your PATH; the styles themselves are
-fetched by `vale sync` and are not committed.
+`npm run lint:prose` runs [Vale](https://vale.sh) against the house voice and
+fails on any alert at any severity, exactly as CI does. It needs `vale` on your
+PATH; the styles themselves are fetched by `vale sync` and are not committed.
+Pass `-- --no-sync` to skip the fetch offline.
+
+The script exists because `vale`'s own exit status covers error-level alerts
+only, and one enabled rule is a warning. A bare `vale .` would pass locally
+what the gate fails.
 
 The scope is this repo's own prose: README, ADRs, and this file. Test fixtures
 and `artifacts/` are exempt in `.vale.ini`, because `test/fixtures/tgdp/` is
 vendored verbatim from upstream and the rest is input chosen for what it parses
 to. Rewriting either to quiet an alert would break the test that reads it.
+
+The rule package is pinned in `.vale.ini`, for the reason the TGDP templates
+are. A gate whose rules arrive from `latest` can turn every open pull request
+red on a day nobody chose. Move the pin deliberately, and expect prose work.
+See [ADR 01008](adrs/01008-gate-on-prose-lint-against-a-pinned-rule-set.md).
 
 ## Pre-1.0
 

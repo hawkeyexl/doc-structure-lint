@@ -62,8 +62,9 @@ adding parsers that each invent their own output shape.
 The chosen option is **a `DocumentParser` registry producing one generic
 `DocumentTree`**. It mirrors `docmeta`'s extractor registry file for file
 (`parserForExtension`, `parserByName` for `--as`, `supportedExtensions()` for
-directory walks, `listFormats()`). That was chosen over an interface shaped like
-its `MetadataExtractor`.
+directory walks, `listFormats()`). The per-format interface underneath it is
+shaped after `docmeta`'s `MetadataExtractor`, so the two registries read the
+same way.
 
 The pipeline runs a format-specific parse, then a format-specific flattening
 into ordered `Block`s, then **one shared `sectionize` fold**, and out comes a

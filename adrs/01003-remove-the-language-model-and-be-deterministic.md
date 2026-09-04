@@ -27,8 +27,8 @@ graphs. `moose-docevals` judges prose with an LLM behind a provider abstraction
 and a consensus/confidence layer. `moose-tracevals` does the same for agent
 traces. `moose-docevals` already treats this tool as a deterministic *grader* it
 invokes (`tool:doc-structure-lint`). Two tools in one family both making AI
-judgments is a duplicated and strictly worse capability. One of them bundled a
-3B model with no confidence gating.
+judgments is a duplicated capability. This one was strictly worse: a bundled 3B
+model with no confidence gating.
 
 ## Decision Drivers
 
