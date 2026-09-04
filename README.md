@@ -9,11 +9,11 @@ built for CI.
 > positional, and `instructions:` has been removed from the template format. See
 > [Migrating](#migrating-from-doc-structure-lint).
 
-`moose-lint` checks that a page has the shape it claims to have: the sections a
-doctype calls for, in order, holding the paragraphs, code blocks, and lists that
-doctype requires. It reads the document as a syntax tree — it does not pattern-match
-source text — and it does not judge prose. Every run is a function of the document
-and the template, so the same inputs always produce the same findings.
+`moose-lint` checks that a page has the shape it claims to have. A doctype calls
+for certain sections, in order, holding certain paragraphs, code blocks, and
+lists. It reads the document as a syntax tree rather than pattern-matching source
+text, and it does not judge prose. Every run is a function of the document and
+the template, so the same inputs always produce the same findings.
 
 It is one of a family of documentation tools, and it deliberately does one job:
 
@@ -58,8 +58,8 @@ moose-lint docs/
 3 files checked, 1 passed, 2 failed, 1 skipped
 ```
 
-A clean run exits `0`, findings exit `1`, and an operational error — no inputs, an
-unreadable template, an invalid template — exits `2`.
+A clean run exits `0` and findings exit `1`. An operational error exits `2`,
+whether that is no inputs, an unreadable template, or an invalid template.
 
 ## Routing by `type`
 
@@ -75,8 +75,8 @@ type: how-to
 ```
 
 `type` is the same key `moose-meta`'s OKF, Diataxis, and TGDP schemas already
-validate, so a repo that types its pages gets routing for free — and one run can
-lint a tree of mixed doctypes, each page checked against the doctype it claims.
+validate, so a repo that types its pages gets routing for free. One run can lint
+a tree of mixed doctypes, and each page is checked against the doctype it claims.
 The seven [built-in templates](#built-in-doctype-templates) cover the common
 ones out of the box.
 
@@ -97,17 +97,17 @@ Steps 3 and 5 are repo policy, written in
 
 Two of these come out of the document, and the difference between them is what
 `$template` is restricted for. A page's `type` is document-controlled, but it
-only *selects* from the routing table the operator assembled — a page cannot
+only *selects* from the routing table the operator assembled. A page cannot
 introduce a template that way, only ask for one already on offer. `$template`
 names a reference directly, which is the one place a document says where a
 template comes from rather than which one it wants.
 
-So `$template` cannot name a URL. A relative path or a built-in id is fine —
+So `$template` cannot name a URL. A relative path or a built-in id is fine.
 `$template: ./house.yaml#house` resolves beside the page that wrote it, not
-beside wherever you ran the command — but `$template: https://…` is refused with
-a `template_error`. Otherwise one line of frontmatter would make the machine
-doing the linting fetch whatever that docset asked for, from inside whatever
-network the CI job runs in. An operator who does want a remote template still
+beside wherever you ran the command. But `$template: https://…` is refused with
+a `template_error`. Otherwise one line of frontmatter would make the linting
+machine fetch whatever that docset asked for, from inside the CI job's own
+network. An operator who does want a remote template still
 has steps 1, 3, 4, and 5.
 
 ### A missing `type` and an unknown one are different
@@ -119,14 +119,14 @@ apart, it does not fail the run, and its neighbours are still checked.
 - docs/notes.md  skipped: no type in frontmatter and no template resolved
 ```
 
-An untyped page is `moose-meta`'s complaint, not this tool's — its OKF schema
+An untyped page is `moose-meta`'s complaint, not this tool's. Its OKF schema
 already requires `type`. Skipping is what lets you point `moose-lint` at a whole
 tree on day one, when three pages out of two hundred are typed.
 
 **Unless nothing at all was checked.** A run that finds files and checks none of
-them exits `2`, because a linter that looked at nothing is indistinguishable
-from a clean docset once it exits `0` — and a repo that adopts `moose-lint` in
-CI before backfilling `type:` keys would get a permanently green job over an
+them exits `2`. A linter that looked at nothing is indistinguishable from a
+clean docset once it exits `0`. A repo that adopts `moose-lint` in CI before
+backfilling `type:` keys would otherwise get a permanently green job over an
 unchecked tree.
 
 ```text
@@ -153,9 +153,9 @@ checked and nobody finding out.
 ### `--explain`
 
 `--explain` prints how each file's template was chosen, and lints nothing. Every
-stage is listed, including the ones that had nothing to say: "why was this page
-linted with *that*?" is usually asked because the answer was surprising, and the
-surprising part is almost always a stage you forgot applies.
+stage is listed, including the ones that had nothing to say. People ask "why was
+this page linted with *that*?" because the answer surprised them. The surprising
+part is almost always a stage you forgot applies.
 
 ```bash
 moose-lint docs/ --explain
@@ -193,13 +193,13 @@ moose-lint docs/ --explain
 ```
 
 `▸` means the page was routed and `-` that it was not. Neither is a verdict on
-the document — `docs/configure.md` is routed and still fails the lint above — and
-`--explain` exits `0` however the docs look. It answers a question about
+the document, since `docs/configure.md` is routed and still fails the lint
+above. `--explain` exits `0` however the docs look. It answers a question about
 configuration, not about the documents.
 
-That includes pages it could not route at all: a `type` no template serves
+That includes pages it could not route at all. A `type` no template serves
 prints a `✗` line and still exits `0`, because "nothing serves this type" is an
-answer. So do not gate CI on `--explain`'s exit code — it will pass over a
+answer. So do not gate CI on `--explain`'s exit code. It will pass over a
 docset whose every page is unrouted. The ordinary run is what reports that, and
 exits `1`.
 
@@ -215,7 +215,7 @@ moose-lint formats      List input formats, implemented and planned
 ```
 
 `-t/--template <ref>` is optional. Given, it applies one template to every file
-in the run and overrides routing entirely — which is what you want for a single
+in the run and overrides routing entirely. That is what you want for a single
 page, and what you do not want for a tree.
 
 `--templates <path>` adds a template file to the run: its templates' `types:`
@@ -242,21 +242,21 @@ moose-lint formats
 | XML | `.dita` in directory walks; `.xml` and `.dita` when named | root-element attributes |
 
 One template checks all of them. The same `tgdp:how-to:1.6` lints a Markdown
-page, an AsciiDoc page, and a DITA topic, and reports **the same findings** —
+page, an AsciiDoc page, and a DITA topic, and reports **the same findings**.
 `test/integration/cross-format.test.ts` holds a fixture pair per format and
 asserts exactly that. If a template ever needed per-format special-casing, the
 content model would be wrong.
 
-Each parser maps its own vocabulary onto three generic content kinds —
-`paragraph`, `code`, `list`. Anything a doctype template cannot describe
+Each parser maps its own vocabulary onto three generic content kinds:
+`paragraph`, `code`, and `list`. Anything a doctype template cannot describe
 (blockquotes, tables, admonitions, figures) is **skipped rather than
-approximated**: counting a table as a list would make `lists: {max: 1}` fail
+approximated**. Counting a table as a list would make `lists: {max: 1}` fail
 documents that satisfy it.
 
 XML is the one format with no universal notion of a section, because that comes
 from the schema rather than the syntax. It ships declarative vocabulary mappings
 for **DITA** and **DocBook**, selected by scoring the document's root element,
-namespace, and element names; a bespoke schema is one more entry in the same
+namespace, and element names. A bespoke schema is one more entry in the same
 table. See the header of [`src/parsers/xml.ts`](src/parsers/xml.ts).
 
 ## Template format
@@ -291,10 +291,10 @@ templates:
 ```
 
 `types:` is what makes a template you wrote first-class rather than a fallback.
-Built-ins are loaded first and user templates overwrite them, so overriding the
-how-to doctype for a repo is one file with `types: [how-to]` in it — no config
-entry, no flag beyond `--templates`. A doctype your file does not claim stays on
-its built-in.
+Built-ins are loaded first and user templates overwrite them. Overriding the
+how-to doctype for a repo is one file with `types: [how-to]` in it, with no
+config entry and no flag beyond `--templates`. A doctype your file does not
+claim stays on its built-in.
 
 ```bash
 moose-lint docs/ --templates ./templates.yaml
@@ -325,7 +325,7 @@ by page.
 `repeat` is what a rule sets to claim more than one section, and it applies to
 both kinds of rule:
 
-- On an **anchored** rule — one with `heading.const` or `heading.pattern` — it
+- On an **anchored** rule, one with `heading.const` or `heading.pattern`, it
   claims the run of consecutive sections whose headings satisfy it. That is how
   a doctype says "one or more sections named `Symptom N`" without giving up
   checking the heading text.
@@ -333,8 +333,8 @@ both kinds of rule:
   claim one.
 
 Without it either kind claims exactly one section, so two adjacent slots each get
-their own. That default is deliberate: adjacent unconstrained sections are
-ordinary in hand-written templates, and a greedy first slot would swallow the
+their own. That default is deliberate. Adjacent unconstrained sections are
+ordinary in hand-written templates. A greedy first slot would swallow the
 second one's section and then report it missing.
 
 ### Content rules
@@ -375,16 +375,16 @@ templates:
         $ref: "#/components/parameters"
 ```
 
-`extends` inherits another template — a built-in id, a path, or a URL. The merge
-recurses through `sections` by key, so tightening or relaxing one nested rule
-keeps its siblings; every other key the child sets replaces the parent's
-outright.
+`extends` inherits another template, whether a built-in id, a path, or a URL.
+The merge recurses through `sections` by key, so tightening or relaxing one
+nested rule keeps its siblings. Every other key the child sets replaces the
+parent's outright.
 
 That is how you keep a built-in and disagree with one part of it.
 `tgdp:how-to:1.6` requires a `See also` section, because upstream ships one and
 does not mark it optional the way it marks `Before you start`. Plenty of real
 how-tos have none. To keep the rest of the doctype and drop that one
-requirement — this is `house-how-to` in [`templates.yaml`](templates.yaml):
+requirement, use the `house-how-to` entry in [`templates.yaml`](templates.yaml):
 
 ```yaml
 templates:
@@ -449,13 +449,13 @@ moose-lint templates
 ```
 
 Each built-in is round-trip tested. `test/integration/tgdp.test.ts` lints TGDP's
-own published `template_<slug>.md` — vendored verbatim under
-`test/fixtures/tgdp/` — against the template derived from it, and requires zero
+own published `template_<slug>.md`, vendored verbatim under
+`test/fixtures/tgdp/`, against the template derived from it, and requires zero
 findings. Where the two disagree, upstream is right. That is what makes
 "publicly vetted" checkable rather than a claim.
 
 The version in an id is a promise about which upstream revision the template
-mirrors, so `npm run check:tgdp-pin` asks GitLab whether upstream has moved past
+mirrors. `npm run check:tgdp-pin` asks GitLab whether upstream has moved past
 the pin and reports what moving it would involve. It is a report, not a gate:
 upstream moving does not make the pinned templates wrong, it makes them old.
 
@@ -467,7 +467,7 @@ render the page title from frontmatter, so their pages legitimately start at
 `##` and have no H1 to match.
 
 Those pages work. When a page carries a frontmatter `title` and its body has no
-H1, that title *is* the document's H1 — findings about it are anchored on the
+H1, that title *is* the document's H1. Findings about it are anchored on the
 frontmatter, where the title actually lives:
 
 ```markdown
@@ -492,7 +492,7 @@ also struggle to name.
 ### One thing that will bite you
 
 **`tgdp:how-to:1.6` requires `See also`.** Upstream includes it unconditionally
-and never marks it optional, so the derived template requires it — and plenty of
+and never marks it optional, so the derived template requires it. Plenty of
 real how-tos have none. Rather than substitute our judgment for TGDP's, relaxing
 it is the worked [`extends` example](#reuse): one file, four lines.
 
@@ -502,8 +502,8 @@ Optional. A repo whose pages all declare their `type` needs none.
 
 Settings live in **`moose.config.yaml`**, one file shared by the whole moose
 family, with one top-level key per tool. `moose-lint` reads `lint:` and neither
-reads nor validates anything else, so the file grows as you adopt more of the
-family without any tool needing to know about the others.
+reads nor validates anything else. The file grows as you adopt more of the
+family, and no tool needs to know about the others.
 
 ```yaml
 # moose.config.yaml
@@ -528,13 +528,13 @@ Discovery walks up from the working directory to the repository root, so it
 works from a subdirectory. `-c/--config <path>` names a file directly and skips
 discovery.
 
-Command-line flags win over the file, with one exception: `--exclude`
-**accumulates** with the configured excludes rather than replacing them, because
-narrowing a run should not quietly discard the repo's standing exclusions.
+Command-line flags win over the file, with one exception. `--exclude`
+**accumulates** with the configured excludes rather than replacing them.
+Narrowing a run should not quietly discard the repo's standing exclusions.
 
 ### What fails loudly
 
-Validation inside `lint:` is strict — unknown keys are an error, not a silent
+Validation inside `lint:` is strict. Unknown keys are an error, not a silent
 default. Beyond that, four shapes are rejected rather than defaulted through,
 because each one silently discards a whole configuration:
 
@@ -559,7 +559,7 @@ const run = await runLint({ inputs: ["docs/"] });
 ```
 
 `template` and `templates` are optional and mirror `--template` and
-`--templates`. `runLint` reads no configuration file — it is a function of the
+`--templates`. `runLint` reads no configuration file. It is a function of the
 options you hand it, so a library caller is never surprised by a file on disk.
 Call `loadConfig()` yourself if you want the file.
 
@@ -570,14 +570,14 @@ Call `loadConfig()` yourself if you want the file.
 | `pretty` | reading. The default. |
 | `json` | tool adapters: `[{ file, success, errors: [{ type, heading, message, position }] }]` |
 | `github` | GitHub workflow commands (`::error file=…,line=…,col=…::`), inline on a pull request |
-| `sarif` | code-scanning uploads — SARIF 2.1.0, one rule descriptor per finding type |
+| `sarif` | SARIF 2.1.0 for code-scanning uploads, one rule descriptor per finding type |
 
 The SARIF output declares every finding type in `tool.driver.rules` and
-references it by both `ruleId` and `ruleIndex`, so alerts group and filter
+references it by both `ruleId` and `ruleIndex`. Alerts then group and filter
 properly rather than arriving as a flat list. Paths are relative and
 forward-slashed against a declared `SRCROOT`, on Windows as well as Linux.
-Skipped files become `note`-level notifications rather than results: a skip is a
-statement about the tool, which declined to look, not about the document — as
+Skipped files become `note`-level notifications rather than results. A skip is a
+statement about the tool, which declined to look, not about the document. As
 results they would open alerts on files nothing examined.
 
 ```bash
@@ -603,14 +603,14 @@ still uses it fails with a message containing the replacement config to paste. S
 
 Section matching also changed. It used to pair template rules to document sections
 by array index, so a single absent optional section misaligned every comparison
-after it. It is now one ordered pass over heading identity — see
+after it. It is now one ordered pass over heading identity. See
 [ADR 01002](adrs/01002-match-sections-in-order-not-by-index.md). Templates that
 worked before still work once `instructions:` and the `doc-structure-lint:`
 version key are gone; templates with optional sections now work *correctly*.
 
 `--template` still applies one template to every file, so an existing invocation
 keeps working unchanged. Adding `types:` to your templates and dropping the flag
-is what turns a per-doctype run into one run over the whole tree — see
+turns a per-doctype run into one run over the whole tree. See
 [ADR 01004](adrs/01004-route-templates-by-the-type-frontmatter-key.md) and
 [ADR 01005](adrs/01005-ship-tgdp-structure-templates-without-demoting-user-templates.md).
 
@@ -621,12 +621,13 @@ npm install
 npm test
 npm run typecheck
 npm run smoke            # build, then exercise the real dist/cli.js
+npm run lint:prose       # the house voice (needs `vale` on PATH)
 npm run check:tgdp-pin   # has upstream moved past the built-ins' pin?
 ```
 
 `npm run smoke` exists because the suite runs against `src/`, where the built-in
 templates sit one directory deeper than they do in the bundled `dist/`. A path
-that is right in the repo and wrong in the package passes every test — which is
+that is right in the repo and wrong in the package passes every test. That is
 how it happened once.
 
 Decisions are recorded in [`adrs/`](adrs/), and the conventions this rewrite
@@ -634,4 +635,4 @@ settled on are in [`CLAUDE.md`](CLAUDE.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

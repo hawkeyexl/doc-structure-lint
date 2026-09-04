@@ -1,8 +1,8 @@
 # Architecture decisions
 
 Why `moose-lint` is built the way it is. Each record states the problem, the
-options that were actually considered, what was chosen, and — the part worth
-reading — what it costs.
+options that were actually considered, and what was chosen. Then it states what
+the choice costs, which is the part worth reading.
 
 These are a log, not a specification. A record describes the decision as it was
 made; where later work changed something, the later record says so. If the code
@@ -17,16 +17,17 @@ and a record disagree, the code is what runs and the record needs fixing.
 | [01005](01005-ship-tgdp-structure-templates-without-demoting-user-templates.md) | Ship TGDP structure templates as built-ins, without demoting user templates |
 | [01006](01006-take-the-h1-from-frontmatter-when-the-body-has-none.md) | Take the H1 from frontmatter when the body has none |
 | [01007](01007-read-settings-from-a-lint-section-of-a-shared-moose-config.md) | Read settings from a `lint:` section of a shared `moose.config.yaml` |
+| [01008](01008-gate-on-prose-lint-against-a-pinned-rule-set.md) | Gate on prose lint, against a pinned rule set |
 
 ## Writing one
 
-Follow the format of the existing records — frontmatter (`status`, `date`,
-`decision-makers`), then Context and Problem Statement, Decision Drivers,
-Considered Options, Decision Outcome, Consequences, Confirmation, and Pros and
-Cons of the Options.
+Follow the format of the existing records. They open with frontmatter
+(`status`, `date`, `decision-makers`). Then come Context and Problem Statement,
+Decision Drivers, Considered Options, Decision Outcome, Consequences,
+Confirmation, and Pros and Cons of the Options.
 
 Two things make a record worth having. **Name the options you rejected**, and
 say what was good about them; a record listing only the winner is an
 advertisement. And **write the Confirmation section**, naming the tests that
-would fail if the decision were reversed — a decision nothing checks is a
+would fail if the decision were reversed. A decision nothing checks is a
 preference.
