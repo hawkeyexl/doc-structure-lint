@@ -55,10 +55,10 @@ Deleted: `src/rules/instructionValidator.js`, `src/util/preloadModel.js`,
 `src/util/tempDir.js`, the `node-llama-cpp` dependency, the `postinstall` and
 `clean` scripts, and `DOC_STRUCTURE_LINT_PRELOAD` from the package and from CI.
 
-`instructions:` is rejected by `src/schemas/template.json` rather than ignored.
-The loader turns that rejection into a message naming the offending template
-path, and prints the equivalent `moose-docevals` eval. The author's own
-instruction text is carried across:
+`instructions:` is rejected rather than ignored, by both the schema and the
+loader. `validateTemplateFile` finds it first and throws, so the message names
+the offending template path and prints the equivalent `moose-docevals` eval.
+The author's own instruction text is carried across:
 
 ```
 templates.yaml: "templates.how-to.sections.title" uses `instructions`, which
@@ -109,7 +109,7 @@ surface of the install.
 
 ### Confirmation
 
-`grep -ri "llama|preloadModel|tempDir|DOC_STRUCTURE_LINT_PRELOAD"` over `src/`,
+`grep -Eri "llama|preloadModel|tempDir|DOC_STRUCTURE_LINT_PRELOAD"` over `src/`,
 `package.json`, and the workflow returns nothing.
 
 The `instructions:` rejection is pinned in `test/unit/template-registry.test.ts`.

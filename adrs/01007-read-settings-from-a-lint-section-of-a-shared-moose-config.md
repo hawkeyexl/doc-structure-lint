@@ -51,7 +51,8 @@ to follow, and what following costs a tool whose config arrives after its CLI.
 The chosen option is **a single `moose.config.yaml`, read under `lint:`.**
 
 The file root is a mapping of tool name to that tool's settings. `loadConfig()`
-reads the file, takes the `lint` value, and hands that to `parseConfig()`.
+reads the file and hands its contents to `parseConfig()`, which takes the
+`lint` value.
 Sibling keys are neither read nor validated. There is no registry of known
 tools, no coordination, and no version coupling between the tools. `src/schemas/config.json`
 describes **the section**, so its strictness applies at every level below `lint:`
