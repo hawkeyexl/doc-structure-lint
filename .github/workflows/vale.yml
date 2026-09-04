@@ -53,9 +53,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Prove the rule set is actually live. If the package ever syncs without
-      # its config, the step above passes over zero rules; this fails instead.
-      - name: Assert the house voice is loaded
+      # Prove the rule set is actually live. Every `BasedOnStyles` lives in the
+      # package's own config, so a sync landing nothing makes Vale lint zero
+      # files and exit 0. The action throws on a failed fetch; this catches a
+      # fetch that "succeeds" without the config. Checked against the synced
+      # tree rather than the `vale` binary, which the action installs into the
+      # tool cache without putting it on PATH.
+      - name: Assert the rule set synced
+        shell: bash
         run: |
-          vale ls-config | grep -q '"Moose"' \
-            || { echo "::error::Vale loaded no Moose styles - the gate would pass over nothing"; exit 1; }
+          compgen -G '.vale/styles/.vale-config/*.ini' >/dev/null \
+            || { echo "::error::Vale synced no style config - the gate would pass over nothing"; exit 1; }
