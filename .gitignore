@@ -137,3 +137,6 @@ dist/
 
 # Vitest cache
 .vitest/
+
+# Vale styles are fetched by `vale sync`, not committed
+.vale/styles/
